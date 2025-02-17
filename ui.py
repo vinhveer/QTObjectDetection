@@ -27,7 +27,7 @@ class Ui_mainWindow(object):
         # Choose Camera
         self.comboBoxChooseCamera = QComboBox(self.tabCamera)
         self.comboBoxChooseCamera.setObjectName(u"comboBoxChooseCamera")
-        self.comboBoxChooseCamera.setGeometry(QRect(10, 30, 281, 22))
+        self.comboBoxChooseCamera.setGeometry(QRect(10, 30, 150, 22))
         self.labelChooseCamera = QLabel(self.tabCamera)
         self.labelChooseCamera.setObjectName(u"labelChooseCamera")
         self.labelChooseCamera.setGeometry(QRect(10, 10, 81, 16))
@@ -36,14 +36,20 @@ class Ui_mainWindow(object):
         # Record Image
         self.buttonStartRecord = QPushButton(self.tabCamera)
         self.buttonStartRecord.setObjectName(u"buttonStartRecord")
-        self.buttonStartRecord.setGeometry(QRect(300, 30, 131, 23))
+        self.buttonStartRecord.setGeometry(QRect(170, 30, 131, 23))
         self.buttonStartRecord.setFont(font)
 
-        self.frameCamera = QFrame(self.tabCamera)
+        # Capture Frame
+        self.buttonCapture = QPushButton(self.tabCamera)
+        self.buttonCapture.setObjectName(u"buttonCapture")
+        self.buttonCapture.setGeometry(QRect(320, 30, 50, 23))
+        self.buttonCapture.setFont(font)
+
+        self.frameCamera = QLabel(self.tabCamera)
         self.frameCamera.setObjectName(u"frameCamera")
         self.frameCamera.setGeometry(QRect(10, 60, 481, 251))
-        self.frameCamera.setFrameShape(QFrame.StyledPanel)
-        self.frameCamera.setFrameShadow(QFrame.Raised)
+        self.frameCamera.setStyleSheet("border: 2px solid black;")  # Thêm viền đen
+        self.frameCamera.setAlignment(Qt.AlignCenter)
 
         # Start Detection
         self.buttonStartDetect = QPushButton(self.tabCamera)
@@ -52,9 +58,9 @@ class Ui_mainWindow(object):
         self.buttonStartDetect.setFont(font)
 
         # Statics Output Detection
-        self.tableDetectCamera = QTableView(self.tabCamera)
-        self.tableDetectCamera.setObjectName(u"tableDetectCamera")
-        self.tableDetectCamera.setGeometry(QRect(500, 60, 231, 251))
+        # self.tableDetectCamera = QTableView(self.tabCamera)
+        # self.tableDetectCamera.setObjectName(u"tableDetectCamera")
+        # self.tableDetectCamera.setGeometry(QRect(500, 60, 231, 251))
 
         # Stop Detection
         self.buttonStopDetect = QPushButton(self.tabCamera)
@@ -80,16 +86,17 @@ class Ui_mainWindow(object):
         self.buttonChoosePicture.setFont(font)
 
         # Display Picture (Input and Output)
-        self.framePicture = QFrame(self.tabPicture)
+        self.framePicture = QLabel(self.tabPicture)
         self.framePicture.setObjectName(u"framePicture")
         self.framePicture.setGeometry(QRect(10, 60, 481, 251))
-        self.framePicture.setFrameShape(QFrame.StyledPanel)
-        self.framePicture.setFrameShadow(QFrame.Raised)
+        self.framePicture.setScaledContents(True)  # Giúp ảnh tự động fit vào QLabel
+        self.framePicture.setScaledContents(False)  # Không tự động co giãn ảnh
+        self.framePicture.setAlignment(Qt.AlignCenter)  # Căn giữa ảnh trong QLabel
 
         # Statics Result
-        self.tableDetectPicture = QTableView(self.tabPicture)
-        self.tableDetectPicture.setObjectName(u"tableDetectPicture")
-        self.tableDetectPicture.setGeometry(QRect(500, 60, 231, 251))
+        # self.tableDetectPicture = QTableView(self.tabPicture)
+        # self.tableDetectPicture.setObjectName(u"tableDetectPicture")
+        # self.tableDetectPicture.setGeometry(QRect(500, 60, 231, 251))
 
         # Download Image Result
         self.buttonDownloadPicture = QPushButton(self.tabPicture)
@@ -133,6 +140,7 @@ class Ui_mainWindow(object):
         mainWindow.setWindowTitle(QCoreApplication.translate("mainWindow", u"Object Detection with YOLO", None))
         self.labelChooseCamera.setText(QCoreApplication.translate("mainWindow", u"Chọn Camera", None))
         self.buttonStartRecord.setText(QCoreApplication.translate("mainWindow", u"Bắt đầu nhận hình ảnh", None))
+        self.buttonCapture.setText(QCoreApplication.translate("mainWindow", u"Chụp", None))
         self.buttonStartDetect.setText(QCoreApplication.translate("mainWindow", u"Bắt đầu nhận diện", None))
         self.buttonStopDetect.setText(QCoreApplication.translate("mainWindow", u"Dừng nhận diện", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabCamera), QCoreApplication.translate("mainWindow", u"Nhận diện qua Camera", None))

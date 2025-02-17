@@ -5,46 +5,80 @@ from PyQt5.QtWidgets import *
 from ui import Ui_mainWindow
 from camera_detect import CameraDetector
 from picture_detect import PictureDetector
+from model import model_instance
 
-import sys, os, platform
+import sys
+import os
+import platform
+import logging
+
+# Set up logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 class MainWindow(QMainWindow):
     def __init__(self):
-        super().__init__()
-        self.ui = Ui_mainWindow()
-        self.ui.setupUi(self)
-
-        QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
-        QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
-        
-        # Khởi tạo các detector và truyền UI vào
-        self.camera_detector = CameraDetector(self.ui)
-        self.picture_detector = PictureDetector(self.ui)
-        
-        # Chỉ xử lý sự kiện chọn model ở main
-        self.ui.buttonChooseModel.clicked.connect(self.select_model)
+        try:
+            super().__init__()
+            self.ui = Ui_mainWindow()
+            self.ui.setupUi(self)
+            
+            # Initialize detectors
+            logger.info("Initializing detectors...")
+            self.camera_detector = CameraDetector(self.ui)
+            self.picture_detector = PictureDetector(self.ui)
+            
+            # Connect model selection button
+            self.ui.buttonChooseModel.clicked.connect(self.select_model)
+            logger.info("MainWindow initialization complete")
+            
+        except Exception as e:
+            logger.error(f"Error initializing MainWindow: {str(e)}")
+            QMessageBox.critical(self, "Error", f"Failed to initialize application: {str(e)}")
         
     def select_model(self):
-        file_path, _ = QFileDialog.getOpenFileName(
-            self,
-            "Select YOLO Model",
-            "",
-            "Model Files (*.pt *.pth *.weights)"
-        )
-        if file_path:
-            # Gửi model cho cả hai detector
-            self.camera_detector.set_model(file_path)
-            self.picture_detector.set_model(file_path)
-            self.ui.labelPictureDirect.setText(file_path)
+        try:
+            file_path, _ = QFileDialog.getOpenFileName(
+                self,
+                "Select YOLO Model",
+                "",
+                "Model Files (*.pt *.pth *.weights)"
+            )
+            if file_path:
+                logger.info(f"Loading model from: {file_path}")
+                self.ui.labelPictureDirect.setText("Đang khởi tạo model ...")
+
+                if model_instance.load_model(file_path):
+                    self.ui.labelPictureDirect.setText(file_path)
+                    self.ui.buttonStartDetect.setEnabled(True)
+                    logger.info("Model loaded successfully")
+                else:
+                    logger.error("Failed to load model")
+                    QMessageBox.warning(self, "Error", "Failed to load model")
+                    
+        except Exception as e:
+            logger.error(f"Error in model selection: {str(e)}")
+            QMessageBox.warning(self, "Error", f"Error selecting model: {str(e)}")
+
+def main():
+    try:
+        # Enable high DPI scaling on Windows
+        if platform.system() == 'Windows':
+            os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
+            QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
+            QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
+
+        app = QApplication(sys.argv)
+        window = MainWindow()
+        window.show()
+        return app.exec_()
+        
+    except Exception as e:
+        logger.critical(f"Critical error in main: {str(e)}")
+        return 1
 
 if __name__ == "__main__":
-    # Xử lý High DPI scaling cho Windows
-    if platform.system() == 'Windows':
-        os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
-        QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
-        QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
-
-    app = QApplication(sys.argv)
-    window = MainWindow()
-    window.show()
-    sys.exit(app.exec_())
+    sys.exit(main())
