@@ -135,6 +135,25 @@ class Ui_mainWindow(object):
         self.tabWidget.setCurrentIndex(1)
         QMetaObject.connectSlotsByName(mainWindow)
 
+        # Thêm QTextEdit để hiển thị thông tin chi tiết
+        self.text_edit_info = QTextEdit(self.tabPicture)
+        self.text_edit_info.setGeometry(QRect(500, 60, 231, 251))
+        self.text_edit_info.setReadOnly(True)
+        
+        # Tùy chỉnh frame hiển thị ảnh
+        self.framePicture.setStyleSheet("border: 2px solid black;")
+        self.framePicture.setAlignment(Qt.AlignCenter)
+        
+        # Thêm progress bar
+        self.progress_bar = QProgressBar(self.tabPicture)
+        self.progress_bar.setGeometry(QRect(110, 30, 441, 23))
+        self.progress_bar.hide()
+
+        # Thêm QTextEdit để hiển thị thông tin chi tiết
+        self.text_edit_camera_info = QTextEdit(self.tabCamera)
+        self.text_edit_camera_info.setGeometry(QRect(500, 60, 231, 251))
+        self.text_edit_camera_info.setReadOnly(True)
+
     # Set Text and Title
     def retranslateUi(self, mainWindow):
         mainWindow.setWindowTitle(QCoreApplication.translate("mainWindow", u"Object Detection with YOLO", None))

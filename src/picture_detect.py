@@ -19,20 +19,6 @@ class PictureDetector(QObject):
         
     def setup_ui(self):
         """Thiết lập UI ban đầu"""
-        # Thêm QTextEdit để hiển thị thông tin chi tiết
-        self.text_edit_info = QTextEdit(self.ui.tabPicture)
-        self.text_edit_info.setGeometry(QRect(500, 60, 231, 251))
-        self.text_edit_info.setReadOnly(True)
-        
-        # Tùy chỉnh frame hiển thị ảnh
-        self.ui.framePicture.setStyleSheet("border: 2px solid black;")
-        self.ui.framePicture.setAlignment(Qt.AlignCenter)
-        
-        # Thêm progress bar
-        self.progress_bar = QProgressBar(self.ui.tabPicture)
-        self.progress_bar.setGeometry(QRect(110, 30, 441, 23))
-        self.progress_bar.hide()
-        
         # Thiết lập trạng thái ban đầu
         self.ui.buttonDownloadPicture.setEnabled(False)
         
@@ -44,7 +30,7 @@ class PictureDetector(QObject):
         
     def select_picture(self):
         """Xử lý chọn ảnh từ file"""
-        self.progress_bar.hide()
+        self.ui.progress_bar.hide()
         file_path, _ = QFileDialog.getOpenFileName(
             None,
             "Chọn hình ảnh",
@@ -55,8 +41,8 @@ class PictureDetector(QObject):
         if file_path:
             try:
                 # Hiển thị progress bar
-                self.progress_bar.setRange(0, 0)  # Chế độ không xác định
-                self.progress_bar.show()
+                self.ui.progress_bar.setRange(0, 0)  # Chế độ không xác định
+                self.ui.progress_bar.show()
                 
                 image = cv2.imread(file_path)
                 if image is None:
@@ -107,7 +93,7 @@ class PictureDetector(QObject):
         self.detection_finished.emit()
         
         # Ẩn progress bar
-        self.progress_bar.hide()
+        self.ui.progress_bar.hide()
         
     def draw_detections(self, detections):
         """Vẽ kết quả detection lên ảnh"""
@@ -256,7 +242,7 @@ class PictureDetector(QObject):
         
     def update_detections_info(self, detections):
         """Cập nhật thông tin detection"""
-        self.text_edit_info.clear()
+        self.ui.text_edit_info.clear()
         
         # Thêm thông tin tổng quan
         total_objects = len(detections)
@@ -267,20 +253,20 @@ class PictureDetector(QObject):
             class_counts[class_id] = class_counts.get(class_id, 0) + 1
         
         # Hiển thị tổng quan
-        self.text_edit_info.append("=== TỔNG QUAN ===")
-        self.text_edit_info.append(f"Tổng số đối tượng: {total_objects}")
-        self.text_edit_info.append("\nPhân bố các lớp:")
+        self.ui.text_edit_info.append("=== TỔNG QUAN ===")
+        self.ui.text_edit_info.append(f"Tổng số đối tượng: {total_objects}")
+        self.ui.text_edit_info.append("\nPhân bố các lớp:")
         for class_id, count in class_counts.items():
-            self.text_edit_info.append(f"- Class {class_id}: {count} đối tượng")
+            self.ui.text_edit_info.append(f"- Class {class_id}: {count} đối tượng")
         
         # Hiển thị chi tiết từng đối tượng
-        self.text_edit_info.append("\n=== CHI TIẾT ===")
+        self.ui.text_edit_info.append("\n=== CHI TIẾT ===")
         for i, det in enumerate(detections, 1):
             info = (f"\nĐối tượng {i}:"
                    f"\n- Lớp: {det['class']}"
                    f"\n- Độ tin cậy: {det['confidence']:.2f}"
                    f"\n- Vị trí: {det['bbox']}")
-            self.text_edit_info.append(info)
+            self.ui.text_edit_info.append(info)
             
     def save_detected_picture(self):
         """Lưu ảnh đã detect"""
@@ -315,8 +301,8 @@ class PictureDetector(QObject):
         """Reset UI về trạng thái ban đầu"""
         self.ui.buttonChoosePicture.setEnabled(True)
         self.ui.buttonDownloadPicture.setEnabled(False)
-        self.progress_bar.hide()
-        self.text_edit_info.clear()
+        self.ui.progress_bar.hide()
+        self.ui.text_edit_info.clear()
         self.ui.framePicture.clear()
         
     def on_detection_complete(self):

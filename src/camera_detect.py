@@ -20,11 +20,6 @@ class CameraDetector(QObject):
         
     def setup_ui(self):
         """Thiết lập UI ban đầu"""
-        # Thêm QTextEdit để hiển thị thông tin chi tiết
-        self.text_edit_camera_info = QTextEdit(self.ui.tabCamera)
-        self.text_edit_camera_info.setGeometry(QRect(500, 60, 231, 251))
-        self.text_edit_camera_info.setReadOnly(True)
-        
         # Tùy chỉnh frame hiển thị ảnh
         self.ui.frameCamera.setScaledContents(False)
         self.ui.frameCamera.setAlignment(Qt.AlignCenter)
@@ -105,7 +100,7 @@ class CameraDetector(QObject):
             self.thread.start_detection()
             self.ui.buttonStartDetect.setEnabled(False)
             self.ui.buttonStopDetect.setEnabled(True)
-            self.text_edit_camera_info.clear()  # Xóa thông tin detection cũ
+            self.ui.text_edit_camera_info.clear()  # Xóa thông tin detection cũ
         else:
             QMessageBox.warning(None, "Lỗi", "Vui lòng tải Model trước!")
             
@@ -148,7 +143,7 @@ class CameraDetector(QObject):
         
     def update_detections_info(self, detections):
         """Cập nhật thông tin detection"""
-        self.text_edit_camera_info.clear()
+        self.ui.text_edit_camera_info.clear()
         
         # Thêm thông tin tổng quan
         total_objects = len(detections)
@@ -159,20 +154,20 @@ class CameraDetector(QObject):
             class_counts[class_id] = class_counts.get(class_id, 0) + 1
         
         # Hiển thị tổng quan
-        self.text_edit_camera_info.append("=== TỔNG QUAN ===")
-        self.text_edit_camera_info.append(f"Tổng số đối tượng: {total_objects}")
-        self.text_edit_camera_info.append("\nPhân bố các lớp:")
+        self.ui.text_edit_camera_info.append("=== TỔNG QUAN ===")
+        self.ui.text_edit_camera_info.append(f"Tổng số đối tượng: {total_objects}")
+        self.ui.text_edit_camera_info.append("\nPhân bố các lớp:")
         for class_id, count in class_counts.items():
-            self.text_edit_camera_info.append(f"- Class {class_id}: {count} đối tượng")
+            self.ui.text_edit_camera_info.append(f"- Class {class_id}: {count} đối tượng")
         
         # Hiển thị chi tiết từng đối tượng
-        self.text_edit_camera_info.append("\n=== CHI TIẾT ===")
+        self.ui.text_edit_camera_info.append("\n=== CHI TIẾT ===")
         for i, det in enumerate(detections, 1):
             info = (f"\nĐối tượng {i}:"
                    f"\n- Lớp: {det['class']}"
                    f"\n- Độ tin cậy: {det['confidence']:.2f}"
                    f"\n- Vị trí: {det['bbox']}")
-            self.text_edit_camera_info.append(info)
+            self.ui.text_edit_camera_info.append(info)
             
     def capture_frame(self):
         """Chụp ảnh, lưu tạm rồi yêu cầu lưu vào vị trí người dùng chọn"""

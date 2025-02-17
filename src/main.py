@@ -11,6 +11,7 @@ import sys
 import os
 import platform
 import logging
+import ctypes
 
 # Set up logging
 logging.basicConfig(
@@ -70,6 +71,13 @@ def main():
             os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
             QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
             QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
+
+            current_dpi = ctypes.windll.shcore.GetScaleFactorForDevice(0) / 100.0
+            if (current_dpi == 1):
+                os.environ["QT_SCALE_FACTOR"] = "1.75"
+            elif (current_dpi == 1.25):
+                os.environ["QT_SCALE_FACTOR"] = "1.75"
+                os.environ["QT_FONT_DPI"] = "96"
 
         app = QApplication(sys.argv)
         window = MainWindow()
