@@ -21,9 +21,9 @@ class CameraDetector(QObject):
     def setup_ui(self):
         """Thiết lập UI ban đầu"""
         # Thêm QTextEdit để hiển thị thông tin chi tiết
-        self.text_edit_info = QTextEdit(self.ui.tabCamera)
-        self.text_edit_info.setGeometry(QRect(500, 60, 231, 251))
-        self.text_edit_info.setReadOnly(True)
+        self.text_edit_camera_info = QTextEdit(self.ui.tabCamera)
+        self.text_edit_camera_info.setGeometry(QRect(500, 60, 231, 251))
+        self.text_edit_camera_info.setReadOnly(True)
         
         # Tùy chỉnh frame hiển thị ảnh
         self.ui.frameCamera.setScaledContents(False)
@@ -84,6 +84,7 @@ class CameraDetector(QObject):
             self.thread = CameraThread(camera_index)
             self.thread.frame_signal.connect(self.update_camera_feed)
             self.thread.error_signal.connect(self.handle_camera_error)
+            self.thread.detection_signal.connect(self.update_detections_info)
             self.thread.start()
             
             self.ui.buttonStartRecord.setText("Dừng nhận hình ảnh")
@@ -104,7 +105,7 @@ class CameraDetector(QObject):
             self.thread.start_detection()
             self.ui.buttonStartDetect.setEnabled(False)
             self.ui.buttonStopDetect.setEnabled(True)
-            self.text_edit_info.clear()  # Xóa thông tin detection cũ
+            self.text_edit_camera_info.clear()  # Xóa thông tin detection cũ
         else:
             QMessageBox.warning(None, "Lỗi", "Vui lòng tải Model trước!")
             
@@ -147,7 +148,7 @@ class CameraDetector(QObject):
         
     def update_detections_info(self, detections):
         """Cập nhật thông tin detection"""
-        self.text_edit_info.clear()
+        self.text_edit_camera_info.clear()
         
         # Thêm thông tin tổng quan
         total_objects = len(detections)
@@ -158,20 +159,21 @@ class CameraDetector(QObject):
             class_counts[class_id] = class_counts.get(class_id, 0) + 1
         
         # Hiển thị tổng quan
-        self.text_edit_info.append("=== TỔNG QUAN ===")
-        self.text_edit_info.append(f"Tổng số đối tượng: {total_objects}")
-        self.text_edit_info.append("\nPhân bố các lớp:")
+        self.text_edit_camera_info.append("=== TỔNG QUAN ===")
+        self.text_edit_camera_info.append(f"Tổng số đối tượng: {total_objects}")
+        self.text_edit_camera_info.append("\nPhân bố các lớp:")
         for class_id, count in class_counts.items():
-            self.text_edit_info.append(f"- Class {class_id}: {count} đối tượng")
-            
+            self.text_edit_camera_info.append(f"- Class {class_id}: {count} đối tượng")
+        
         # Hiển thị chi tiết từng đối tượng
-        self.text_edit_info.append("\n=== CHI TIẾT ===")
+        self.text_edit_camera_info.append("\n=== CHI TIẾT ===")
         for i, det in enumerate(detections, 1):
             info = (f"\nĐối tượng {i}:"
                    f"\n- Lớp: {det['class']}"
-                   f"\n- Độ tin cậy: {det['confidence']:.2f}")
-            self.text_edit_info.append(info)
-
+                   f"\n- Độ tin cậy: {det['confidence']:.2f}"
+                   f"\n- Vị trí: {det['bbox']}")
+            self.text_edit_camera_info.append(info)
+            
     def capture_frame(self):
         """Chụp ảnh, lưu tạm rồi yêu cầu lưu vào vị trí người dùng chọn"""
         if self.current_frame is None:
@@ -205,6 +207,7 @@ class CameraDetector(QObject):
 class CameraThread(QThread):
     frame_signal = pyqtSignal(object)
     error_signal = pyqtSignal(str)
+    detection_signal = pyqtSignal(list)
     
     def __init__(self, camera_index):
         super().__init__()
@@ -233,6 +236,7 @@ class CameraThread(QThread):
                         detections = model_instance.detect(frame)
                         if detections:
                             frame = self.draw_detections(frame.copy(), detections)
+                            self.detection_signal.emit(detections)
                     except Exception as e:
                         print(f"Detection error: {str(e)}")
                 

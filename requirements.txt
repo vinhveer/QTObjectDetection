@@ -1,0 +1,8 @@
+# Core Libraries
+PyQt5>=5.15.0
+opencv-python>=4.5.0
+numpy>=1.19.0
+ultralytics>=8.0.0
+
+# Optional Dependencies for Windows Camera Detection
+pygrabber; platform_system=="Windows"
