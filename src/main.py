@@ -26,7 +26,7 @@ class MainWindow(QMainWindow):
             super().__init__()
             self.ui = Ui_mainWindow()
             self.ui.setupUi(self)
-            
+
             # Initialize detectors
             logger.info("Initializing detectors...")
             self.camera_detector = CameraDetector(self.ui)

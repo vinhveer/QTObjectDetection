@@ -34,6 +34,7 @@ class CameraDetector(QObject):
         self.ui.buttonStartDetect.clicked.connect(self.start_detection)
         self.ui.buttonStopDetect.clicked.connect(self.stop_detection)
         self.ui.buttonCapture.clicked.connect(self.capture_frame)
+        self.ui.buttonSaveAllDetectCam.clicked.connect(self.save_all_data_detect_cam)
         
     def setup_camera_list(self):
         """Quét và hiển thị danh sách camera có sẵn"""
@@ -168,6 +169,10 @@ class CameraDetector(QObject):
                    f"\n- Độ tin cậy: {det['confidence']:.2f}"
                    f"\n- Vị trí: {det['bbox']}")
             self.ui.text_edit_camera_info.append(info)
+
+    def save_all_data_detect_cam(self):
+        print("Save all data detect camera")
+        return None
             
     def capture_frame(self):
         """Chụp ảnh, lưu tạm rồi yêu cầu lưu vào vị trí người dùng chọn"""

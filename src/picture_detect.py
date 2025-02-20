@@ -19,13 +19,13 @@ class PictureDetector(QObject):
         
     def setup_ui(self):
         """Thiết lập UI ban đầu"""
-        # Thiết lập trạng thái ban đầu
         self.ui.buttonDownloadPicture.setEnabled(False)
         
     def setup_ui_connections(self):
         """Thiết lập các kết nối signals/slots"""
         self.ui.buttonChoosePicture.clicked.connect(self.select_picture)
         self.ui.buttonDownloadPicture.clicked.connect(self.save_detected_picture)
+        self.ui.buttonSaveDataDetectImg.clicked.connect(self.save_data_detected_picture)
         self.detection_finished.connect(self.on_detection_complete)
         
     def select_picture(self):
@@ -296,6 +296,10 @@ class PictureDetector(QObject):
                                     f"Đã lưu ảnh tại:\n{file_path}")
             except Exception as e:
                 QMessageBox.warning(None, "Lỗi", f"Không thể lưu ảnh: {str(e)}")
+
+    def save_data_detected_picture(self):
+        print("Save Data Detected Picture")
+        return None
                 
     def reset_ui(self):
         """Reset UI về trạng thái ban đầu"""
