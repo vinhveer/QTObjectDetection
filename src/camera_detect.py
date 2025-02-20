@@ -27,16 +27,15 @@ class CameraDetector(QObject):
         self.ui.frameCamera.setAlignment(Qt.AlignCenter)
         
         # Thiết lập trạng thái ban đầu
-        self.ui.buttonStopDetect.setEnabled(False)
-        self.ui.buttonStartDetect.setEnabled(False)
+        self.ui.buttonDetect.setEnabled(False)
+        self.ui.buttonDetect.setText("Bắt đầu nhận diện")
         self.ui.buttonCapture.setEnabled(False)
         self.ui.buttonSaveAllDetectCam.setEnabled(False)
    
     def setup_ui_connections(self):
         """Thiết lập các kết nối signals/slots"""
         self.ui.buttonStartRecord.clicked.connect(self.toggle_camera)
-        self.ui.buttonStartDetect.clicked.connect(self.start_detection)
-        self.ui.buttonStopDetect.clicked.connect(self.stop_detection)
+        self.ui.buttonDetect.clicked.connect(self.toggle_detection)
         self.ui.buttonCapture.clicked.connect(self.capture_frame)
         self.ui.buttonSaveAllDetectCam.clicked.connect(self.save_all_data_detect_cam)
         
@@ -88,37 +87,40 @@ class CameraDetector(QObject):
             self.thread.start()
             
             self.ui.buttonStartRecord.setText("Dừng nhận hình ảnh")
-            self.ui.buttonStartDetect.setEnabled(True)
+            self.ui.buttonDetect.setEnabled(True)
             self.ui.comboBoxChooseCamera.setEnabled(False)
         else:
-            self.stop_detection()
+            if self.thread.detecting:
+                self.toggle_detection()  # Stop detection if running
             self.thread.stop_capture()
             self.thread = None
             self.ui.frameCamera.clear()
             self.ui.buttonStartRecord.setText("Bắt đầu nhận hình ảnh")
-            self.ui.buttonStartDetect.setEnabled(False)
+            self.ui.buttonDetect.setEnabled(False)
+            self.ui.buttonDetect.setText("Bắt đầu nhận diện")
             self.ui.comboBoxChooseCamera.setEnabled(True)
             
-    def start_detection(self):
-        """Bắt đầu nhận diện đối tượng"""
-        if self.thread and model_instance.model is not None:
-            self.thread.start_detection()
-            self.ui.buttonStartDetect.setEnabled(False)
-            self.ui.buttonStopDetect.setEnabled(True)
-            self.ui.buttonSaveAllDetectCam.setEnabled(False)
-            self.ui.buttonCapture.setEnabled(True)
-            self.ui.text_edit_camera_info.clear()  # Xóa thông tin detection cũ
-        else:
-            QMessageBox.warning(None, "Lỗi", "Vui lòng tải Model trước!")
-            
-    def stop_detection(self):
-        """Dừng nhận diện đối tượng"""
+    def toggle_detection(self):
+        """Bắt đầu/dừng nhận diện đối tượng"""
         if self.thread:
-            self.thread.stop_detection()
-            self.ui.buttonStartDetect.setEnabled(True)
-            self.ui.buttonStopDetect.setEnabled(False)
-            self.ui.buttonCapture.setEnabled(False)
-            self.ui.buttonSaveAllDetectCam.setEnabled(True)
+            if not self.thread.detecting:
+                # Start detection
+                if model_instance.model is not None:
+                    if not self.thread.set_frame_skip():
+                        return
+                    self.thread.start_detection()
+                    self.ui.buttonDetect.setText("Dừng nhận diện")
+                    self.ui.buttonCapture.setEnabled(True)
+                    self.ui.buttonSaveAllDetectCam.setEnabled(False)
+                    self.ui.text_edit_camera_info.clear()
+                else:
+                    QMessageBox.warning(None, "Lỗi", "Vui lòng tải Model trước!")
+            else:
+                # Stop detection
+                self.thread.stop_detection()
+                self.ui.buttonDetect.setText("Bắt đầu nhận diện")
+                self.ui.buttonCapture.setEnabled(False)
+                self.ui.buttonSaveAllDetectCam.setEnabled(True)
             
     def update_camera_feed(self, frame):
         """Cập nhật frame camera"""
@@ -163,20 +165,16 @@ class CameraDetector(QObject):
             class_counts[class_id] = class_counts.get(class_id, 0) + 1
         
         # Hiển thị tổng quan
-        self.ui.text_edit_camera_info.append("=== TỔNG QUAN ===")
         self.ui.text_edit_camera_info.append(f"Tổng số đối tượng: {total_objects}")
         self.ui.text_edit_camera_info.append("\nPhân bố các lớp:")
         for class_id, count in class_counts.items():
             self.ui.text_edit_camera_info.append(f"- Class {class_id}: {count} đối tượng")
         
-        # Hiển thị chi tiết từng đối tượng
-        self.ui.text_edit_camera_info.append("\n=== CHI TIẾT ===")
-        for i, det in enumerate(detections, 1):
-            info = (f"\nĐối tượng {i}:"
-                   f"\n- Lớp: {det['class']}"
-                   f"\n- Độ tin cậy: {det['confidence']:.2f}"
-                   f"\n- Vị trí: {det['bbox']}")
-            self.ui.text_edit_camera_info.append(info)
+        # Hiển thị thông tin frame
+        self.ui.text_edit_camera_info.append("\nThông tin frame:")
+        self.ui.text_edit_camera_info.append(f"- Số frame: {self.thread.frame_count}")
+        self.ui.text_edit_camera_info.append(f"- Kích thước: {self.current_frame.shape[1]}x{self.current_frame.shape[0]}")
+
 
     def save_all_data_detect_cam(self):
         # Kiểm tra dữ liệu
@@ -309,28 +307,111 @@ class CameraDetector(QObject):
         return
             
     def capture_frame(self):
-        """Chụp ảnh, lưu tạm rồi yêu cầu lưu vào vị trí người dùng chọn"""
-        if self.current_frame is None:
+        """Chụp ảnh và lưu các file đi kèm (ảnh gốc, ảnh detected, json, excel)"""
+        current_frames = self.thread.get_current_frames()
+        if current_frames['original'] is None or current_frames['detected'] is None or not current_frames['detections']:
+            QMessageBox.warning(None, "Lỗi", "Không có frame hoặc dữ liệu detection để lưu!")
             return
 
-        # Lưu ảnh tạm vào thư mục hệ thống
-        temp_dir = tempfile.gettempdir()
-        temp_path = os.path.join(temp_dir, "temp_capture.png")
-        cv2.imwrite(temp_path, cv2.cvtColor(self.current_frame, cv2.COLOR_RGB2BGR))
-
-        # Hiển thị hộp thoại lưu file
-        file_path, _ = QFileDialog.getSaveFileName(
+        # Cho người dùng chọn thư mục gốc để lưu
+        root_dir = QFileDialog.getExistingDirectory(
             None,
-            "Lưu ảnh",
+            "Chọn thư mục để lưu dữ liệu",
             "",
-            "Images (*.png *.jpg)"
+            QFileDialog.ShowDirsOnly | QFileDialog.DontResolveSymlinks
         )
+        
+        if not root_dir:  # Người dùng đã hủy
+            return
 
-        if file_path:  # Nếu chọn lưu, di chuyển file tạm sang vị trí đã chọn
-            os.replace(temp_path, file_path)
-            QMessageBox.information(None, "Thành công", "Đã lưu ảnh thành công!")
-        else:  # Nếu hủy, xóa ảnh tạm
-            os.remove(temp_path)
+        try:
+            # Tạo các thư mục con
+            subdirs = [
+                'images/original',
+                'images/detected',
+                'data_excel',
+                'data_json'
+            ]
+            for subdir in subdirs:
+                full_path = os.path.join(root_dir, subdir)
+                os.makedirs(full_path, exist_ok=True)
+
+            # Lấy timestamp hiện tại
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            base_filename = f"detection_{timestamp}"
+
+            # Lưu ảnh gốc
+            original_path = os.path.join(root_dir, 'images/original', f"{base_filename}.jpg")
+            cv2.imwrite(original_path, cv2.cvtColor(current_frames['original'], cv2.COLOR_RGB2BGR))
+
+            # Lưu ảnh detected
+            detected_path = os.path.join(root_dir, 'images/detected', f"{base_filename}.jpg")
+            cv2.imwrite(detected_path, cv2.cvtColor(current_frames['detected'], cv2.COLOR_RGB2BGR))
+
+            # Lưu JSON
+            json_path = os.path.join(root_dir, 'data_json', f"{base_filename}.json")
+            json_data = {
+                'timestamp': timestamp,
+                'original_image': f"images/original/{base_filename}.jpg",
+                'detected_image': f"images/detected/{base_filename}.jpg",
+                'detections': current_frames['detections']
+            }
+            with open(json_path, 'w') as f:
+                json.dump(json_data, f, indent=4)
+
+            # Tạo và lưu Excel
+            excel_path = os.path.join(root_dir, 'data_excel', f"{base_filename}.xlsx")
+            
+            # Create DataFrames
+            df_class = pd.DataFrame(columns=['Class', 'Count'])
+            df_detail = pd.DataFrame(columns=[
+                'Class', 
+                'Confidence', 
+                'Top', 
+                'Left', 
+                'Bottom', 
+                'Right', 
+                'Width', 
+                'Height'
+            ])
+            
+            # Process detection data
+            class_counts = {}
+            for det in current_frames['detections']:
+                class_name = det['class']
+                confidence = det['confidence']
+                bbox = det['bbox']
+                
+                top, left = bbox[1], bbox[0]
+                bottom, right = bbox[3], bbox[2]
+                width = right - left
+                height = bottom - top
+                
+                df_detail.loc[len(df_detail)] = [
+                    class_name, 
+                    confidence, 
+                    top, 
+                    left, 
+                    bottom, 
+                    right, 
+                    width, 
+                    height
+                ]
+                
+                class_counts[class_name] = class_counts.get(class_name, 0) + 1
+            
+            for class_name, count in class_counts.items():
+                df_class.loc[len(df_class)] = [class_name, count]
+            
+            with pd.ExcelWriter(excel_path) as writer:
+                df_class.to_excel(writer, sheet_name='Class Summary', index=False)
+                df_detail.to_excel(writer, sheet_name='Detection Details', index=False)
+
+            QMessageBox.information(None, "Thành công", 
+                f"Đã lưu tất cả dữ liệu vào thư mục:\n{root_dir}")
+                
+        except Exception as e:
+            QMessageBox.critical(None, "Lỗi", f"Lỗi khi lưu dữ liệu: {str(e)}")
 
     @staticmethod
     def get_color_for_class(class_id):
@@ -348,10 +429,25 @@ class CameraThread(QThread):
         self.camera_index = camera_index
         self.running = False
         self.detecting = False
-        # Thêm các thuộc tính mới để lưu trữ tạm thời
+        # Thêm các thuộc tính để lưu trữ tạm thời
         self.temp_images = []  # Lưu các ảnh
         self.temp_detections = []  # Lưu kết quả detection
         self.temp_dir = tempfile.mkdtemp()  # Tạo thư mục tạm
+        # Thêm biến lưu frame hiện tại
+        self.current_frame = None
+        self.current_detected_frame = None
+        self.current_detections = None
+        # Thêm biến đếm frame và frame skip
+        self.frame_count = 0
+        self.frame_skip = 1
+
+    def set_frame_skip(self):
+        """Hiển thị dialog để cấu hình frame skip"""
+        dialog = FrameSkipDialog()
+        if dialog.exec_() == QDialog.Accepted:
+            self.frame_skip = dialog.get_skip_value()
+            return True
+        return False
         
     def run(self):
         self.running = True
@@ -365,22 +461,29 @@ class CameraThread(QThread):
         while self.running:
             ret, frame = cap.read()
             if ret:
+                # Tăng biến đếm frame
+                self.frame_count += 1
+                
                 # Chuyển từ BGR sang RGB
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 frame_to_display = frame.copy()
+                self.current_frame = frame.copy()
                 
-                if self.detecting and model_instance.model is not None:
-                    try:
-                        # Thực hiện detection
-                        detections = model_instance.detect(frame)
-                        if detections:
-                            # Draw detections on the display frame
-                            frame_to_display = self.draw_detections(frame_to_display, detections)
-                            self.detection_signal.emit(detections)
-                            # Lưu frame gốc và detection vào bộ nhớ tạm
-                            self.save_temp_frame(frame, detections)
-                    except Exception as e:
-                        print(f"Detection error: {str(e)}")
+                # Chỉ xử lý detection khi đến frame cần xử lý
+                if self.frame_count % self.frame_skip == 0:
+                    if self.detecting and model_instance.model is not None:
+                        try:
+                            # Thực hiện detection
+                            detections = model_instance.detect(frame)
+                            if detections:
+                                # Draw detections on the display frame
+                                frame_to_display, self.current_detections = self.draw_detections(frame_to_display, detections)
+                                self.current_detected_frame = frame_to_display.copy()
+                                self.detection_signal.emit(detections)
+                                # Lưu frame gốc và detection vào bộ nhớ tạm
+                                self.save_temp_frame(frame, detections)
+                        except Exception as e:
+                            print(f"Detection error: {str(e)}")
                 
                 # Gửi frame đã vẽ detection đến UI
                 self.frame_signal.emit(frame_to_display)
@@ -401,7 +504,7 @@ class CameraThread(QThread):
         cv2.imwrite(temp_original_path, cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
         
         # Tạo và lưu frame đã detect
-        frame_with_detection = self.draw_detections(frame.copy(), detections)
+        frame_with_detection, _ = self.draw_detections(frame.copy(), detections)
         temp_detected_path = os.path.join(self.temp_dir, f"frame_detected_{timestamp}.jpg")
         cv2.imwrite(temp_detected_path, cv2.cvtColor(frame_with_detection, cv2.COLOR_RGB2BGR))
         
@@ -423,12 +526,21 @@ class CameraThread(QThread):
             'detections': self.temp_detections
         }
 
+    def get_current_frames(self):
+        """Trả về frame hiện tại và frame detected"""
+        return {
+            'original': self.current_frame,
+            'detected': self.current_detected_frame,
+            'detections': self.current_detections
+        }
+
     def clear_temp_data(self):
         """Xóa tất cả dữ liệu tạm thời"""
         # Xóa các file ảnh
         for frame_info in self.temp_images:
             try:
-                os.remove(frame_info['image_path'])
+                os.remove(frame_info['original_path'])
+                os.remove(frame_info['detected_path'])
             except:
                 pass
         
@@ -458,7 +570,8 @@ class CameraThread(QThread):
         self.detecting = False
         
     def draw_detections(self, frame, detections):
-        """Vẽ kết quả detection lên frame"""
+        """Vẽ kết quả detection lên frame và trả về frame đã vẽ cùng detections"""
+        frame_copy = frame.copy()
         for det in detections:
             bbox = det['bbox']
             x1, y1, x2, y2 = map(int, bbox)  # Convert coordinates to integers
@@ -469,7 +582,7 @@ class CameraThread(QThread):
             color = self.get_color_for_class(class_id)
             
             # Vẽ bounding box
-            cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+            cv2.rectangle(frame_copy, (x1, y1), (x2, y2), color, 2)
             
             # Chuẩn bị text
             label = f"Class {class_id} ({confidence:.2f})"
@@ -477,21 +590,55 @@ class CameraThread(QThread):
             # Vẽ background cho text
             (text_width, text_height), _ = cv2.getTextSize(
                 label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 2)
-            cv2.rectangle(frame, 
+            cv2.rectangle(frame_copy, 
                         (x1, y1 - text_height - 10), 
                         (x1 + text_width + 10, y1),
                         color, -1)
             
             # Vẽ text
-            cv2.putText(frame, label,
+            cv2.putText(frame_copy, label,
                       (x1 + 5, y1 - 5),
                       cv2.FONT_HERSHEY_SIMPLEX, 0.5,
                       (255, 255, 255), 2)
             
-        return frame
+        return frame_copy, detections
         
     @staticmethod
     def get_color_for_class(class_id):
         """Tạo màu ngẫu nhiên nhưng ổn định cho mỗi class"""
         np.random.seed(class_id)
         return tuple(map(int, np.random.randint(0, 255, 3)))
+    
+class FrameSkipDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Cấu hình chụp frame")
+        self.setModal(True)
+        
+        # Tạo layout
+        layout = QVBoxLayout()
+        
+        # Tạo các widget
+        form_layout = QFormLayout()
+        self.skip_spinbox = QSpinBox()
+        self.skip_spinbox.setMinimum(1)
+        self.skip_spinbox.setMaximum(100)
+        self.skip_spinbox.setValue(1)
+        self.skip_spinbox.setToolTip("Số frame bỏ qua giữa mỗi lần chụp\nVí dụ: 2 nghĩa là cứ 2 frame sẽ chụp 1 lần")
+        form_layout.addRow("Số bước nhảy:", self.skip_spinbox)
+        
+        # Thêm form layout vào layout chính
+        layout.addLayout(form_layout)
+        
+        # Thêm buttons
+        button_box = QDialogButtonBox(
+            QDialogButtonBox.Ok | QDialogButtonBox.Cancel
+        )
+        button_box.accepted.connect(self.accept)
+        button_box.rejected.connect(self.reject)
+        layout.addWidget(button_box)
+        
+        self.setLayout(layout)
+    
+    def get_skip_value(self):
+        return self.skip_spinbox.value()

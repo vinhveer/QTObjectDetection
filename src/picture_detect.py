@@ -292,48 +292,65 @@ class PictureDetector(QObject):
                 QMessageBox.warning(None, "Lỗi", f"Không thể lưu ảnh: {str(e)}")
 
     def save_data_detected_picture(self):
-        # Lưu dữ liệu nhận diện
-        if self.processed_image is None:
-            QMessageBox.warning(None, "Lỗi", "Không có ảnh để lưu!")
-            return
-        
-        file_path, _ = QFileDialog.getSaveFileName(
-            None,
-            "Lưu dữ liệu nhận diện",
-            "",
-            "Excel Files (*.xlsx)"
-        )
-        
-        if file_path:
-            df_class = pd.DataFrame(columns=['Class', 'Count'])
-            df_detail = pd.DataFrame(columns=['Class', 'Confidence', 'Top', 'Left', 'Bottom', 'Right', 'Width', 'Height'])
+        try:
+            # Kiểm tra ảnh tồn tại
+            if self.processed_image is None:
+                QMessageBox.warning(None, "Lỗi", "Không có ảnh để lưu!")
+                return
             
-            class_counts = {}
-            
-            for det in self.detection_thread.detections:
-                class_name = det['class']
-                confidence = det['confidence']
-                bbox = det['bbox']  # bbox = [x1, y1, x2, y2]
+            # Kiểm tra có dữ liệu detection không
+            if not hasattr(self.detection_thread, 'detections') or not self.detection_thread.detections:
+                QMessageBox.warning(None, "Lỗi", "Không có dữ liệu nhận diện để lưu!")
+                return
                 
-                top, left = bbox[1], bbox[0]
-                bottom, right = bbox[3], bbox[2]
-                width = right - left
-                height = bottom - top
-                
-                df_detail.loc[len(df_detail)] = [class_name, confidence, top, left, bottom, right, width, height]
-                
-                if class_name in class_counts:
-                    class_counts[class_name] += 1
-                else:
-                    class_counts[class_name] = 1
+            file_path, _ = QFileDialog.getSaveFileName(
+                None,
+                "Lưu dữ liệu nhận diện",
+                "",
+                "Excel Files (*.xlsx)"
+            )
             
-            for class_name, count in class_counts.items():
-                df_class.loc[len(df_class)] = [class_name, count]
-            
-            with pd.ExcelWriter(file_path) as writer:
-                df_class.to_excel(writer, sheet_name='Class Summary', index=False)
-                df_detail.to_excel(writer, sheet_name='Detection Details', index=False)
+            if file_path:
+                try:
+                    df_class = pd.DataFrame(columns=['Class', 'Count'])
+                    df_detail = pd.DataFrame(columns=['Class', 'Confidence', 'Top', 'Left', 'Bottom', 'Right', 'Width', 'Height'])
+                    
+                    class_counts = {}
+                    
+                    for det in self.detection_thread.detections:
+                        class_name = det['class']
+                        confidence = det['confidence']
+                        bbox = det['bbox']
+                        
+                        top, left = bbox[1], bbox[0]
+                        bottom, right = bbox[3], bbox[2]
+                        width = right - left
+                        height = bottom - top
+                        
+                        df_detail.loc[len(df_detail)] = [class_name, confidence, top, left, bottom, right, width, height]
+                        
+                        if class_name in class_counts:
+                            class_counts[class_name] += 1
+                        else:
+                            class_counts[class_name] = 1
+                    
+                    for class_name, count in class_counts.items():
+                        df_class.loc[len(df_class)] = [class_name, count]
+                    
+                    with pd.ExcelWriter(file_path) as writer:
+                        df_class.to_excel(writer, sheet_name='Class Summary', index=False)
+                        df_detail.to_excel(writer, sheet_name='Detection Details', index=False)
+                    
+                    QMessageBox.information(None, "Thành công", "Đã lưu dữ liệu nhận diện thành công!")
+                    
+                except PermissionError:
+                    QMessageBox.critical(None, "Lỗi", "Không thể lưu file. File có thể đang được mở bởi chương trình khác!")
+                except Exception as e:
+                    QMessageBox.critical(None, "Lỗi", f"Lỗi khi lưu dữ liệu: {str(e)}")
         
+        except Exception as e:
+            QMessageBox.critical(None, "Lỗi", f"Đã xảy ra lỗi không mong muốn: {str(e)}")
+            
         return
                     
     def reset_ui(self):

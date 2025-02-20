@@ -56,17 +56,11 @@ class Ui_mainWindow(object):
         self.text_edit_camera_info.setGeometry(QRect(500, 60, 231, 221))
         self.text_edit_camera_info.setReadOnly(True)
 
-        # Start Detection
-        self.buttonStartDetect = QPushButton(self.tabCamera)
-        self.buttonStartDetect.setObjectName(u"buttonStartDetect")
-        self.buttonStartDetect.setGeometry(QRect(500, 30, 111, 23))
-        self.buttonStartDetect.setFont(font)
-
-        # Stop Detection
-        self.buttonStopDetect = QPushButton(self.tabCamera)
-        self.buttonStopDetect.setObjectName(u"buttonStopDetect")
-        self.buttonStopDetect.setGeometry(QRect(620, 30, 111, 23))
-        self.buttonStopDetect.setFont(font)
+        # Start Detect
+        self.buttonDetect = QPushButton(self.tabCamera)
+        self.buttonDetect.setObjectName(u"buttonDetect")
+        self.buttonDetect.setGeometry(QRect(620, 30, 111, 23))
+        self.buttonDetect.setFont(font)
 
         # Save All Data
         self.buttonSaveAllDetectCam = QPushButton(self.tabCamera)
@@ -158,8 +152,7 @@ class Ui_mainWindow(object):
         self.labelChooseCamera.setText(QCoreApplication.translate("mainWindow", u"Chọn Camera", None))
         self.buttonStartRecord.setText(QCoreApplication.translate("mainWindow", u"Bắt đầu nhận hình ảnh", None))
         self.buttonCapture.setText(QCoreApplication.translate("mainWindow", u"Chụp lại khung hình", None))
-        self.buttonStartDetect.setText(QCoreApplication.translate("mainWindow", u"Bắt đầu nhận diện", None))
-        self.buttonStopDetect.setText(QCoreApplication.translate("mainWindow", u"Dừng nhận diện", None))
+        self.buttonDetect.setText(QCoreApplication.translate("mainWindow", u"Bắt đầu nhận diện", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabCamera), QCoreApplication.translate("mainWindow", u"Nhận diện qua Camera", None))
         self.labelChoosePicture.setText(QCoreApplication.translate("mainWindow", u"Chọn hình ảnh", None))
         self.buttonChoosePicture.setText(QCoreApplication.translate("mainWindow", u"Chọn tập tin ...", None))

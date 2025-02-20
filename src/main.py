@@ -54,7 +54,7 @@ class MainWindow(QMainWindow):
 
                 if model_instance.load_model(file_path):
                     self.ui.labelPictureDirect.setText(file_path)
-                    self.ui.buttonStartDetect.setEnabled(True)
+                    # self.ui.buttonDetect.setEnabled(True)
 
                     self.ui.buttonChoosePicture.setEnabled(True)
                     logger.info("Model loaded successfully")
