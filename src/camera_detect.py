@@ -1,9 +1,11 @@
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
-import cv2, time, sys, os, tempfile
+import cv2, time, sys, os, tempfile, json, shutil, datetime
 import numpy as np
+import pandas as pd
 from model import model_instance
+from datetime import datetime
 
 if sys.platform.startswith("win"):
     from pygrabber.dshow_graph import FilterGraph
@@ -27,7 +29,9 @@ class CameraDetector(QObject):
         # Thiết lập trạng thái ban đầu
         self.ui.buttonStopDetect.setEnabled(False)
         self.ui.buttonStartDetect.setEnabled(False)
-        
+        self.ui.buttonCapture.setEnabled(False)
+        self.ui.buttonSaveAllDetectCam.setEnabled(False)
+   
     def setup_ui_connections(self):
         """Thiết lập các kết nối signals/slots"""
         self.ui.buttonStartRecord.clicked.connect(self.toggle_camera)
@@ -101,6 +105,8 @@ class CameraDetector(QObject):
             self.thread.start_detection()
             self.ui.buttonStartDetect.setEnabled(False)
             self.ui.buttonStopDetect.setEnabled(True)
+            self.ui.buttonSaveAllDetectCam.setEnabled(False)
+            self.ui.buttonCapture.setEnabled(True)
             self.ui.text_edit_camera_info.clear()  # Xóa thông tin detection cũ
         else:
             QMessageBox.warning(None, "Lỗi", "Vui lòng tải Model trước!")
@@ -111,6 +117,8 @@ class CameraDetector(QObject):
             self.thread.stop_detection()
             self.ui.buttonStartDetect.setEnabled(True)
             self.ui.buttonStopDetect.setEnabled(False)
+            self.ui.buttonCapture.setEnabled(False)
+            self.ui.buttonSaveAllDetectCam.setEnabled(True)
             
     def update_camera_feed(self, frame):
         """Cập nhật frame camera"""
@@ -171,8 +179,134 @@ class CameraDetector(QObject):
             self.ui.text_edit_camera_info.append(info)
 
     def save_all_data_detect_cam(self):
-        print("Save all data detect camera")
-        return None
+        # Kiểm tra dữ liệu
+        temp_data = self.thread.get_temp_data()
+        if not temp_data['detections']:
+            QMessageBox.warning(None, "Lỗi", "Không có dữ liệu detection để lưu!")
+            return
+
+        # Cho người dùng chọn thư mục gốc để lưu
+        root_dir = QFileDialog.getExistingDirectory(
+            None,
+            "Chọn thư mục để lưu dữ liệu",
+            "",
+            QFileDialog.ShowDirsOnly | QFileDialog.DontResolveSymlinks
+        )
+        
+        if not root_dir:  # Người dùng đã hủy
+            return
+
+        try:
+            # Tạo progress dialog
+            progress = QProgressDialog("Đang lưu dữ liệu...", "Hủy", 0, len(temp_data['images']), None)
+            progress.setWindowModality(Qt.WindowModal)
+            progress.setWindowTitle("Tiến trình lưu")
+            progress.setMinimumDuration(0)
+            
+            # Tạo các thư mục con
+            subdirs = [
+                'images/original',
+                'images/detected',
+                'data_excel',
+                'data_json'
+            ]
+            for subdir in subdirs:
+                full_path = os.path.join(root_dir, subdir)
+                os.makedirs(full_path, exist_ok=True)
+
+            # Xử lý từng frame
+            for i, frame_info in enumerate(temp_data['images']):
+                if progress.wasCanceled():
+                    break
+                    
+                progress.setValue(i)
+                progress.setLabelText(f"Đang lưu frame {i+1}/{len(temp_data['images'])}...")
+                
+                # ... existing save operations ...
+                timestamp = frame_info['timestamp']
+                original_path = frame_info['original_path']
+                detected_path = frame_info['detected_path']
+                detections = frame_info['detections']
+                
+                base_filename = f"detection_{timestamp}"
+                
+                # Copy files and save data
+                original_dest = os.path.join(root_dir, 'images/original', f"{base_filename}.jpg")
+                shutil.copy2(original_path, original_dest)
+                
+                detected_dest = os.path.join(root_dir, 'images/detected', f"{base_filename}.jpg")
+                shutil.copy2(detected_path, detected_dest)
+                
+                # Save JSON
+                json_path = os.path.join(root_dir, 'data_json', f"{base_filename}.json")
+                json_data = {
+                    'timestamp': timestamp,
+                    'original_image': f"images/original/{base_filename}.jpg",
+                    'detected_image': f"images/detected/{base_filename}.jpg",
+                    'detections': detections
+                }
+                with open(json_path, 'w') as f:
+                    json.dump(json_data, f, indent=4)
+                
+                # Save Excel
+                excel_path = os.path.join(root_dir, 'data_excel', f"{base_filename}.xlsx")
+                
+                # Create DataFrames
+                df_class = pd.DataFrame(columns=['Class', 'Count'])
+                df_detail = pd.DataFrame(columns=[
+                    'Class', 
+                    'Confidence', 
+                    'Top', 
+                    'Left', 
+                    'Bottom', 
+                    'Right', 
+                    'Width', 
+                    'Height'
+                ])
+                
+                # Process detection data
+                class_counts = {}
+                for det in detections:
+                    class_name = det['class']
+                    confidence = det['confidence']
+                    bbox = det['bbox']
+                    
+                    top, left = bbox[1], bbox[0]
+                    bottom, right = bbox[3], bbox[2]
+                    width = right - left
+                    height = bottom - top
+                    
+                    df_detail.loc[len(df_detail)] = [
+                        class_name, 
+                        confidence, 
+                        top, 
+                        left, 
+                        bottom, 
+                        right, 
+                        width, 
+                        height
+                    ]
+                    
+                    class_counts[class_name] = class_counts.get(class_name, 0) + 1
+                
+                for class_name, count in class_counts.items():
+                    df_class.loc[len(df_class)] = [class_name, count]
+                
+                with pd.ExcelWriter(excel_path) as writer:
+                    df_class.to_excel(writer, sheet_name='Class Summary', index=False)
+                    df_detail.to_excel(writer, sheet_name='Detection Details', index=False)
+
+            progress.setValue(len(temp_data['images']))
+            
+            if not progress.wasCanceled():
+                QMessageBox.information(None, "Thành công", 
+                    f"Đã lưu tất cả dữ liệu vào thư mục:\n{root_dir}")
+                self.thread.clear_temp_data()
+                
+        except Exception as e:
+            QMessageBox.critical(None, "Lỗi", f"Lỗi khi lưu dữ liệu: {str(e)}")
+        
+        return
             
     def capture_frame(self):
         """Chụp ảnh, lưu tạm rồi yêu cầu lưu vào vị trí người dùng chọn"""
@@ -214,6 +348,10 @@ class CameraThread(QThread):
         self.camera_index = camera_index
         self.running = False
         self.detecting = False
+        # Thêm các thuộc tính mới để lưu trữ tạm thời
+        self.temp_images = []  # Lưu các ảnh
+        self.temp_detections = []  # Lưu kết quả detection
+        self.temp_dir = tempfile.mkdtemp()  # Tạo thư mục tạm
         
     def run(self):
         self.running = True
@@ -229,19 +367,23 @@ class CameraThread(QThread):
             if ret:
                 # Chuyển từ BGR sang RGB
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                frame_to_display = frame.copy()
                 
                 if self.detecting and model_instance.model is not None:
                     try:
                         # Thực hiện detection
                         detections = model_instance.detect(frame)
                         if detections:
-                            frame = self.draw_detections(frame.copy(), detections)
+                            # Draw detections on the display frame
+                            frame_to_display = self.draw_detections(frame_to_display, detections)
                             self.detection_signal.emit(detections)
+                            # Lưu frame gốc và detection vào bộ nhớ tạm
+                            self.save_temp_frame(frame, detections)
                     except Exception as e:
                         print(f"Detection error: {str(e)}")
                 
-                # Gửi frame đến UI
-                self.frame_signal.emit(frame)
+                # Gửi frame đã vẽ detection đến UI
+                self.frame_signal.emit(frame_to_display)
             else:
                 self.error_signal.emit("Lỗi khi đọc frame từ camera")
                 break
@@ -249,7 +391,61 @@ class CameraThread(QThread):
             time.sleep(1/30)  # Giới hạn fps
 
         cap.release()
-       
+
+    def save_temp_frame(self, frame, detections):
+        """Lưu frame và detection vào bộ nhớ tạm"""
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        
+        # Lưu frame gốc vào thư mục tạm
+        temp_original_path = os.path.join(self.temp_dir, f"frame_original_{timestamp}.jpg")
+        cv2.imwrite(temp_original_path, cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
+        
+        # Tạo và lưu frame đã detect
+        frame_with_detection = self.draw_detections(frame.copy(), detections)
+        temp_detected_path = os.path.join(self.temp_dir, f"frame_detected_{timestamp}.jpg")
+        cv2.imwrite(temp_detected_path, cv2.cvtColor(frame_with_detection, cv2.COLOR_RGB2BGR))
+        
+        # Lưu thông tin
+        frame_info = {
+            'timestamp': timestamp,
+            'original_path': temp_original_path,
+            'detected_path': temp_detected_path,
+            'detections': detections
+        }
+        
+        self.temp_images.append(frame_info)
+        self.temp_detections.append(detections)
+
+    def get_temp_data(self):
+        """Trả về dữ liệu tạm thời"""
+        return {
+            'images': self.temp_images,
+            'detections': self.temp_detections
+        }
+
+    def clear_temp_data(self):
+        """Xóa tất cả dữ liệu tạm thời"""
+        # Xóa các file ảnh
+        for frame_info in self.temp_images:
+            try:
+                os.remove(frame_info['image_path'])
+            except:
+                pass
+        
+        # Xóa thư mục tạm
+        try:
+            shutil.rmtree(self.temp_dir)
+        except:
+            pass
+        
+        # Reset danh sách
+        self.temp_images = []
+        self.temp_detections = []
+        
+    def __del__(self):
+        """Destructor để đảm bảo xóa dữ liệu tạm khi object bị hủy"""
+        self.clear_temp_data()
+        
     def stop_capture(self):
         self.running = False
         self.detecting = False
@@ -264,68 +460,33 @@ class CameraThread(QThread):
     def draw_detections(self, frame, detections):
         """Vẽ kết quả detection lên frame"""
         for det in detections:
-            x1, y1, x2, y2 = det['bbox']
+            bbox = det['bbox']
+            x1, y1, x2, y2 = map(int, bbox)  # Convert coordinates to integers
             confidence = det['confidence']
             class_id = det['class']
             
-            # Màu cho mỗi class
+            # Lấy màu cho class
             color = self.get_color_for_class(class_id)
             
             # Vẽ bounding box
             cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
             
-            # Tính toán vị trí và kích thước text
-            label = f"Class {class_id}"
-            conf_text = f"{confidence:.2f}"
+            # Chuẩn bị text
+            label = f"Class {class_id} ({confidence:.2f})"
             
-            font = cv2.FONT_HERSHEY_SIMPLEX
-            font_scale = 0.5
-            font_thickness = 2
+            # Vẽ background cho text
+            (text_width, text_height), _ = cv2.getTextSize(
+                label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 2)
+            cv2.rectangle(frame, 
+                        (x1, y1 - text_height - 10), 
+                        (x1 + text_width + 10, y1),
+                        color, -1)
             
-            # Tính kích thước của label và confidence
-            (label_width, label_height), _ = cv2.getTextSize(
-                label, font, font_scale, font_thickness)
-            (conf_width, conf_height), _ = cv2.getTextSize(
-                conf_text, font, font_scale, font_thickness)
-            
-            # Lấy kích thước lớn nhất
-            max_width = max(label_width, conf_width)
-            total_height = label_height + conf_height + 5  # 5px spacing
-            
-            # Vẽ background đen mờ
-            alpha = 0.6
-            overlay = frame.copy()
-            cv2.rectangle(
-                overlay,
-                (x1, y1 - total_height - 10),  # 10px padding
-                (x1 + max_width + 10, y1),      # 10px padding
-                (0, 0, 0),
-                -1
-            )
-            # Áp dụng độ mờ
-            cv2.addWeighted(overlay, alpha, frame, 1 - alpha, 0, frame)
-            
-            # Vẽ label
-            cv2.putText(
-                frame,
-                label,
-                (x1 + 5, y1 - total_height + label_height),  # 5px padding
-                font,
-                font_scale,
-                color,
-                font_thickness
-            )
-            
-            # Vẽ confidence
-            cv2.putText(
-                frame,
-                conf_text,
-                (x1 + 5, y1 - 5),  # 5px padding from bottom
-                font,
-                font_scale,
-                color,
-                font_thickness
-            )
+            # Vẽ text
+            cv2.putText(frame, label,
+                      (x1 + 5, y1 - 5),
+                      cv2.FONT_HERSHEY_SIMPLEX, 0.5,
+                      (255, 255, 255), 2)
             
         return frame
         

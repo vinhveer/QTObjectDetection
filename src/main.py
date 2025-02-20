@@ -28,7 +28,7 @@ class MainWindow(QMainWindow):
             self.ui.setupUi(self)
 
             # Initialize detectors
-            logger.info("Initializing detectors...")
+            logger.info("Initializing detectors ...")
             self.camera_detector = CameraDetector(self.ui)
             self.picture_detector = PictureDetector(self.ui)
             
@@ -44,7 +44,7 @@ class MainWindow(QMainWindow):
         try:
             file_path, _ = QFileDialog.getOpenFileName(
                 self,
-                "Select YOLO Model",
+                "Chọn Model",
                 "",
                 "Model Files (*.pt *.pth *.weights)"
             )
@@ -55,14 +55,16 @@ class MainWindow(QMainWindow):
                 if model_instance.load_model(file_path):
                     self.ui.labelPictureDirect.setText(file_path)
                     self.ui.buttonStartDetect.setEnabled(True)
+
+                    self.ui.buttonChoosePicture.setEnabled(True)
                     logger.info("Model loaded successfully")
                 else:
                     logger.error("Failed to load model")
-                    QMessageBox.warning(self, "Error", "Failed to load model")
+                    QMessageBox.warning(self, "Lỗi", "Không thể khởi tạo Model. Vui lòng chọn file khác.")
                     
         except Exception as e:
             logger.error(f"Error in model selection: {str(e)}")
-            QMessageBox.warning(self, "Error", f"Error selecting model: {str(e)}")
+            QMessageBox.warning(self, "Lỗi", f"Không thể chọn Model: {str(e)}")
 
 def main():
     try:

@@ -3,6 +3,8 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 import cv2
 import numpy as np
+import pandas as pd
+import openpyxl
 from model import model_instance
 
 class PictureDetector(QObject):
@@ -20,6 +22,8 @@ class PictureDetector(QObject):
     def setup_ui(self):
         """Thiết lập UI ban đầu"""
         self.ui.buttonDownloadPicture.setEnabled(False)
+        self.ui.buttonChoosePicture.setEnabled(False)
+        self.ui.buttonSaveDataDetectImg.setEnabled(False)
         
     def setup_ui_connections(self):
         """Thiết lập các kết nối signals/slots"""
@@ -80,7 +84,9 @@ class PictureDetector(QObject):
             QMessageBox.warning(None, "Lỗi", f"Lỗi khi nhận diện: {self.detection_thread.error}")
             self.reset_ui()
             return
-            
+        
+        self.ui.buttonSaveDataDetectImg.setEnabled(True)
+
         self.processed_image = self.detection_thread.processed_image
         detections = self.detection_thread.detections
         
@@ -92,7 +98,6 @@ class PictureDetector(QObject):
         self.ui.buttonDownloadPicture.setEnabled(True)
         self.detection_finished.emit()
         
-        # Ẩn progress bar
         self.ui.progress_bar.hide()
         
     def draw_detections(self, detections):
@@ -211,25 +216,20 @@ class PictureDetector(QObject):
         if image is None:
             return
             
-        # Lấy kích thước của frame
         frame_width = self.ui.framePicture.width()
         frame_height = self.ui.framePicture.height()
         
-        # Tính toán tỷ lệ scale để ảnh vừa với frame và giữ tỷ lệ
         img_height, img_width = image.shape[:2]
         scale = min(frame_width/img_width, frame_height/img_height)
         
-        # Kích thước mới
         new_width = int(img_width * scale)
         new_height = int(img_height * scale)
         
-        # Chuyển sang QImage và scale
         bytes_per_line = 3 * image.shape[1]
         q_image = QImage(image.data, image.shape[1], image.shape[0], 
                         bytes_per_line, QImage.Format_RGB888)
         pixmap = QPixmap.fromImage(q_image)
         
-        # Scale ảnh với chất lượng cao
         scaled_pixmap = pixmap.scaled(
             new_width,
             new_height,
@@ -237,14 +237,12 @@ class PictureDetector(QObject):
             Qt.SmoothTransformation
         )
         
-        # Hiển thị lên frame
         self.ui.framePicture.setPixmap(scaled_pixmap)
         
     def update_detections_info(self, detections):
         """Cập nhật thông tin detection"""
         self.ui.text_edit_info.clear()
         
-        # Thêm thông tin tổng quan
         total_objects = len(detections)
         class_counts = {}
         
@@ -252,14 +250,12 @@ class PictureDetector(QObject):
             class_id = det['class']
             class_counts[class_id] = class_counts.get(class_id, 0) + 1
         
-        # Hiển thị tổng quan
         self.ui.text_edit_info.append("=== TỔNG QUAN ===")
         self.ui.text_edit_info.append(f"Tổng số đối tượng: {total_objects}")
         self.ui.text_edit_info.append("\nPhân bố các lớp:")
         for class_id, count in class_counts.items():
             self.ui.text_edit_info.append(f"- Class {class_id}: {count} đối tượng")
         
-        # Hiển thị chi tiết từng đối tượng
         self.ui.text_edit_info.append("\n=== CHI TIẾT ===")
         for i, det in enumerate(detections, 1):
             info = (f"\nĐối tượng {i}:"
@@ -283,10 +279,8 @@ class PictureDetector(QObject):
         
         if file_path:
             try:
-                # Chuyển từ RGB sang BGR để lưu với OpenCV
                 save_image = cv2.cvtColor(self.processed_image, cv2.COLOR_RGB2BGR)
                 
-                # Lưu ảnh với chất lượng cao nhất
                 if file_path.lower().endswith('.jpg') or file_path.lower().endswith('.jpeg'):
                     cv2.imwrite(file_path, save_image, [cv2.IMWRITE_JPEG_QUALITY, 100])
                 else:  # PNG
@@ -298,9 +292,50 @@ class PictureDetector(QObject):
                 QMessageBox.warning(None, "Lỗi", f"Không thể lưu ảnh: {str(e)}")
 
     def save_data_detected_picture(self):
-        print("Save Data Detected Picture")
-        return None
+        # Lưu dữ liệu nhận diện
+        if self.processed_image is None:
+            QMessageBox.warning(None, "Lỗi", "Không có ảnh để lưu!")
+            return
+        
+        file_path, _ = QFileDialog.getSaveFileName(
+            None,
+            "Lưu dữ liệu nhận diện",
+            "",
+            "Excel Files (*.xlsx)"
+        )
+        
+        if file_path:
+            df_class = pd.DataFrame(columns=['Class', 'Count'])
+            df_detail = pd.DataFrame(columns=['Class', 'Confidence', 'Top', 'Left', 'Bottom', 'Right', 'Width', 'Height'])
+            
+            class_counts = {}
+            
+            for det in self.detection_thread.detections:
+                class_name = det['class']
+                confidence = det['confidence']
+                bbox = det['bbox']  # bbox = [x1, y1, x2, y2]
                 
+                top, left = bbox[1], bbox[0]
+                bottom, right = bbox[3], bbox[2]
+                width = right - left
+                height = bottom - top
+                
+                df_detail.loc[len(df_detail)] = [class_name, confidence, top, left, bottom, right, width, height]
+                
+                if class_name in class_counts:
+                    class_counts[class_name] += 1
+                else:
+                    class_counts[class_name] = 1
+            
+            for class_name, count in class_counts.items():
+                df_class.loc[len(df_class)] = [class_name, count]
+            
+            with pd.ExcelWriter(file_path) as writer:
+                df_class.to_excel(writer, sheet_name='Class Summary', index=False)
+                df_detail.to_excel(writer, sheet_name='Detection Details', index=False)
+        
+        return
+                    
     def reset_ui(self):
         """Reset UI về trạng thái ban đầu"""
         self.ui.buttonChoosePicture.setEnabled(True)
@@ -327,39 +362,6 @@ class DetectionThread(QThread):
             self.processed_image = self.image.copy()
             # Thực hiện detection
             self.detections = model_instance.detect(self.image)
-            
-            # In thông tin chi tiết về các detection
-            if self.detections:
-                print("\n=== DETECTION RESULTS ===")
-                print(f"Total objects detected: {len(self.detections)}")
-                
-                # Thống kê theo class
-                class_counts = {}
-                for det in self.detections:
-                    class_id = det['class']
-                    class_counts[class_id] = class_counts.get(class_id, 0) + 1
-                
-                print("\nObjects per class:")
-                for class_id, count in class_counts.items():
-                    print(f"Class {class_id}: {count} objects")
-                
-                # In chi tiết từng detection
-                print("\nDetailed coordinates:")
-                for i, det in enumerate(self.detections, 1):
-                    x1, y1, x2, y2 = det['bbox']
-                    print(f"\nObject {i}:")
-                    print(f"- Class: {det['class']}")
-                    print(f"- Confidence: {det['confidence']:.4f}")
-                    print(f"- Coordinates:")
-                    print(f"  + Top-left     (x1, y1): ({x1}, {y1})")
-                    print(f"  + Bottom-right (x2, y2): ({x2}, {y2})")
-                    print(f"  + Width : {x2 - x1}")
-                    print(f"  + Height: {y2 - y1}")
-                    
-                print("\n" + "="*30 + "\n")
-            else:
-                print("No objects detected in the image")
-                
         except Exception as e:
             self.error = str(e)
             print(f"Error during detection: {self.error}")
