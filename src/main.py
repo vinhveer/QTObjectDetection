@@ -1,17 +1,12 @@
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
+from PySide6.QtWidgets import *
 
-from ui import Ui_mainWindow
-from camera_detect import CameraDetector
-from picture_detect import PictureDetector
-from model import model_instance
+from views.ui import Ui_mainWindow
+from controller.camera_detect import CameraDetector
+from controller.picture_detect import PictureDetector
+from module.model import model_instance
 
 import sys
-import os
-import platform
 import logging
-import ctypes
 
 # Set up logging
 logging.basicConfig(
@@ -29,6 +24,7 @@ class MainWindow(QMainWindow):
 
             # Initialize detectors
             logger.info("Initializing detectors ...")
+
             self.camera_detector = CameraDetector(self.ui)
             self.picture_detector = PictureDetector(self.ui)
             
@@ -48,13 +44,13 @@ class MainWindow(QMainWindow):
                 "",
                 "Model Files (*.pt *.pth *.weights)"
             )
+            
             if file_path:
                 logger.info(f"Loading model from: {file_path}")
                 self.ui.labelPictureDirect.setText("Đang khởi tạo model ...")
 
                 if model_instance.load_model(file_path):
                     self.ui.labelPictureDirect.setText(file_path)
-                    # self.ui.buttonDetect.setEnabled(True)
 
                     self.ui.buttonChoosePicture.setEnabled(True)
                     logger.info("Model loaded successfully")
@@ -68,23 +64,10 @@ class MainWindow(QMainWindow):
 
 def main():
     try:
-        # Enable high DPI scaling on Windows
-        if platform.system() == 'Windows':
-            os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
-            QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
-            QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
-
-            current_dpi = ctypes.windll.shcore.GetScaleFactorForDevice(0) / 100.0
-            if (current_dpi == 1):
-                os.environ["QT_SCALE_FACTOR"] = "1.75"
-            elif (current_dpi == 1.25):
-                os.environ["QT_SCALE_FACTOR"] = "1.75"
-                os.environ["QT_FONT_DPI"] = "96"
-
         app = QApplication(sys.argv)
         window = MainWindow()
         window.show()
-        return app.exec_()
+        return app.exec()
         
     except Exception as e:
         logger.critical(f"Critical error in main: {str(e)}")
