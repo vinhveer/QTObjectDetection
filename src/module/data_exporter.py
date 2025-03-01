@@ -62,14 +62,14 @@ class DataExporter:
                 except Exception as e:
                     QMessageBox.warning(
                         None,
-                        "Warning",
-                        f"Could not create directory: {str(e)}. Please select a directory manually."
+                        "Cảnh bảo",
+                        f"Không thể tạo thư mục: {str(e)}. Vui lòng chọn thư mục theo cách thủ công."
                     )
             else:
                 QMessageBox.warning(
                     None,
-                    "Warning",
-                    "No save path configured in settings. Please select a directory."
+                    "Cảnh báo",
+                    "Không có đường dẫn lưu nào được cấu hình trong cài đặt. Vui lòng chọn một thư mục."
                 )
         
         # Show dialog to select directory
@@ -112,7 +112,7 @@ class DataExporter:
                 
             return True
         except Exception as e:
-            QMessageBox.critical(None, "Error", f"Failed to create directories: {str(e)}")
+            QMessageBox.critical(None, "Lỗi", f"Không tạo được thư mục: {str(e)}")
             return False
             
     def generate_base_filename(self, prefix="detection"):
@@ -315,7 +315,7 @@ class DataExporter:
         # Check if valid data exists
         required_frames = ['original', 'binding_box', 'warm_up']
         if any(frames.get(f) is None for f in required_frames) or not detections:
-            QMessageBox.warning(None, "Error", "No frame or detection data to save!")
+            QMessageBox.warning(None, "Lỗi", "Không có khung hình hoặc dữ liệu phát hiện nào để lưu!")
             return None
 
         # Get destination directory based on save_prompt_type
@@ -341,8 +341,8 @@ class DataExporter:
 
             QMessageBox.information(
                 None,
-                "Success", 
-                f"Frame exported to:\n{root_dir}"
+                "Hoàn tất", 
+                f"Toàn bộ dữ liệu được xuất sang:\n{root_dir}"
             )
                 
             return {
@@ -354,7 +354,7 @@ class DataExporter:
             }
                 
         except Exception as e:
-            QMessageBox.critical(None, "Error", f"Error exporting frame: {str(e)}")
+            QMessageBox.critical(None, "Lỗi", f"Lỗi khi xuất dữ liệu: {str(e)}")
             return None
         
     def export_all_frames(self, frame_data):
@@ -369,7 +369,7 @@ class DataExporter:
         """
         # Check if data exists
         if not frame_data.get('images') or not frame_data.get('detections'):
-            QMessageBox.warning(None, "Error", "No detection data to save!")
+            QMessageBox.warning(None, "Lỗi", "Không có dữ liệu phát hiện nào để lưu!")
             return None
 
         # Get destination directory based on save_prompt_type
@@ -380,9 +380,9 @@ class DataExporter:
         try:
             # Create a custom progress dialog
             progress = QProgressDialog(None)
-            progress.setWindowTitle("Saving Progress")
-            progress.setLabelText("Initializing...")
-            progress.setCancelButtonText("Cancel")
+            progress.setWindowTitle("Tiến trình xuất dữ liệu")
+            progress.setLabelText("Đang khởi tạo ...")
+            progress.setCancelButtonText("Hủy")
             progress.setWindowModality(Qt.WindowModal)
             progress.setMinimumDuration(0)
             
@@ -418,8 +418,8 @@ class DataExporter:
                     
                 progress.setValue(i)
                 progress.setLabelText(
-                    f"Processing frame {i+1} of {total_frames}\n"
-                    f"Saving to: {root_dir}"
+                    f"Đang xử lý khung hình thứ {i+1} trong {total_frames}\n"
+                    f"Lưu tại: {root_dir}"
                 )
                 
                 # Extract frame information
@@ -458,7 +458,6 @@ class DataExporter:
                 # Create metadata file with export information
                 metadata = {
                     'export_timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                    'exported_by': 'vinhveer',  # Using the current user's login
                     'total_frames': total_frames,
                     'export_location': root_dir,
                     'frames_processed': len(all_paths['json_paths']),
@@ -476,10 +475,10 @@ class DataExporter:
                 
                 QMessageBox.information(
                     None, 
-                    "Success", 
-                    f"All frames exported to:\n{root_dir}\n\n"
-                    f"Total frames processed: {total_frames}\n"
-                    f"Export completed at: {metadata['export_timestamp']}"
+                    "Hoàn tất", 
+                    f"Toàn bộ dữ liệu được xuất đến:\n{root_dir}\n\n"
+                    f"Tổng số khung hình: {total_frames}\n"
+                    f"Xuất dữ liệu hoàn tất lúc: {metadata['export_timestamp']}"
                 )
                 
                 return {
@@ -492,13 +491,13 @@ class DataExporter:
             else:
                 QMessageBox.warning(
                     None,
-                    "Export Canceled",
-                    f"Export was canceled. {len(all_paths['json_paths'])} frames were processed."
+                    "Quá trình xuất dữ liệu đã bị hủy",
+                    f"Đã hủy xuất dữ liệu. {len(all_paths['json_paths'])} khung hình đã được xử lý."
                 )
                 return None
                 
         except Exception as e:
-            QMessageBox.critical(None, "Error", f"Error exporting frames: {str(e)}")
+            QMessageBox.critical(None, "Lỗi", f"Lỗi khi xuất khung hình: {str(e)}")
             return None
 
     def get_export_statistics(self, export_result):

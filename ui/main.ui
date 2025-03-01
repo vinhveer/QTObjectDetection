@@ -242,8 +242,8 @@
               </property>
               <property name="minimumSize">
                <size>
-                <width>480</width>
-                <height>100</height>
+                <width>0</width>
+                <height>0</height>
                </size>
               </property>
               <property name="font">
@@ -281,8 +281,8 @@
               </property>
               <property name="minimumSize">
                <size>
-                <width>480</width>
-                <height>100</height>
+                <width>0</width>
+                <height>0</height>
                </size>
               </property>
               <property name="font">
@@ -435,6 +435,12 @@
            <layout class="QGridLayout" name="gridLayout_2">
             <item row="0" column="0">
              <widget class="QLabel" name="framePictureBindingBox">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
               <property name="font">
                <font>
                 <family>Segoe UI</family>
@@ -463,7 +469,7 @@
             <item row="0" column="0">
              <widget class="QLabel" name="framePictureWarmUp">
               <property name="sizePolicy">
-               <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>1</horstretch>
                 <verstretch>0</verstretch>
                </sizepolicy>
@@ -575,7 +581,7 @@
            </spacer>
           </item>
           <item>
-           <widget class="QPushButton" name="buttonSaveDataDetectMulti">
+           <widget class="QPushButton" name="buttonSaveImageChoose">
             <property name="minimumSize">
              <size>
               <width>230</width>
@@ -588,7 +594,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="buttonDownloadMultiPicture">
+           <widget class="QPushButton" name="buttonSaveAllData">
             <property name="minimumSize">
              <size>
               <width>250</width>
@@ -644,8 +650,8 @@
               </property>
               <property name="minimumSize">
                <size>
-                <width>480</width>
-                <height>100</height>
+                <width>0</width>
+                <height>0</height>
                </size>
               </property>
               <property name="font">
@@ -675,6 +681,12 @@
            <layout class="QGridLayout" name="gridLayout_13">
             <item row="0" column="0">
              <widget class="QLabel" name="frameFolderWarmUp">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
               <property name="font">
                <font>
                 <family>Segoe UI</family>

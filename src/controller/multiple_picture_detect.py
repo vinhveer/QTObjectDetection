@@ -3,13 +3,14 @@ from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 import os
 import cv2
+import tempfile
+import shutil
 from datetime import datetime
 
 from module.model import model_instance
 from module.detection_thread import DetectionThread
 from module.image_utils import ImageUtils
 from module.data_exporter import DataExporter
-from module.process_dialog import ProcessDialog
 
 class MultiplePictureDetector(QObject):
     detection_finished = Signal(str)  # Signal to emit when detection of a single image is complete
@@ -35,8 +36,8 @@ class MultiplePictureDetector(QObject):
     def setup_ui(self):
         """Setup initial UI"""
         # Configure initial button states
-        self.ui.buttonSaveDataDetectMulti.setEnabled(False)
-        self.ui.buttonDownloadMultiPicture.setEnabled(False)
+        self.ui.buttonSaveAllData.setEnabled(False)
+        self.ui.buttonSaveImageChoose.setEnabled(False)
         
         # Configure frames
         for frame in [self.ui.frameFolderBindingBox, self.ui.frameFolderWarmUp]:
@@ -56,8 +57,8 @@ class MultiplePictureDetector(QObject):
     def setup_ui_connections(self):
         """Setup signals/slots connections"""
         self.ui.buttonChooseFolder.clicked.connect(self.select_folder)
-        self.ui.buttonSaveDataDetectMulti.clicked.connect(self.save_all_detection_data)
-        self.ui.buttonDownloadMultiPicture.clicked.connect(self.save_selected_image)
+        self.ui.buttonSaveAllData.clicked.connect(self.save_all_detection_data)
+        self.ui.buttonSaveImageChoose.clicked.connect(self.save_selected_image)
         self.ui.listImage.itemClicked.connect(self.display_selected_image)
         self.ui.listImage.currentItemChanged.connect(self.on_item_selection_changed)
         self.ui.buttonCancelProcessing.clicked.connect(self.cancel_processing)
@@ -111,6 +112,9 @@ class MultiplePictureDetector(QObject):
                 # Display status message
                 self.ui.textEditFolderStatus.append(f"Bắt đầu xử lý {len(self.image_files)} ảnh từ thư mục:")
                 self.ui.textEditFolderStatus.append(f"{folder_path}\n")
+
+                self.ui.frameFolderBindingBox.setText("Đang trong quá trình nhận dạng ...")
+                self.ui.frameFolderWarmUp.setText("Đang trong quá trình nhận dạng ...")
                 
                 # Start processing images
                 self.process_next_image()
@@ -277,6 +281,87 @@ class MultiplePictureDetector(QObject):
                    f"\n- Vị trí: {det['bbox']}")
             self.ui.textEditFolderStatus.append(info)
             
+    def save_all_detection_data(self):
+        """Save all detection data using DataExporter's export_all_frames method"""
+        if not self.detection_results:
+            QMessageBox.warning(None, "Lỗi", "Không có dữ liệu để lưu!")
+            return
+
+        try:
+            # Create a temporary directory to store image files
+            temp_dir = tempfile.mkdtemp()
+
+            # Prepare data for export
+            frame_data = {
+                'images': [],
+                'detections': []
+            }
+
+            for image_path, results in self.detection_results.items():
+                try:
+                    # Normalize the image path
+                    image_path = os.path.normpath(image_path).replace('\\', '/')
+
+                    # Use the original image path directly (assuming it’s a file path)
+                    original_path = image_path
+
+                    # Save binding_box and warm_up arrays as temporary files
+                    binding_box_path = os.path.join(temp_dir, f"{os.path.basename(image_path)}_binding_box.jpg")
+                    warm_up_path = os.path.join(temp_dir, f"{os.path.basename(image_path)}_warm_up.jpg")
+
+                    # Write image arrays to temporary files (convert RGB to BGR for OpenCV)
+                    cv2.imwrite(binding_box_path, cv2.cvtColor(results['binding_box'], cv2.COLOR_RGB2BGR))
+                    cv2.imwrite(warm_up_path, cv2.cvtColor(results['warm_up'], cv2.COLOR_RGB2BGR))
+
+                    # Create frame_info with file paths
+                    frame_info = {
+                        'timestamp': os.path.splitext(os.path.basename(image_path))[0],  # Unique identifier
+                        'detections': results['detections'],
+                        'original_path': original_path,
+                        'binding_box_path': binding_box_path,
+                        'warmup_path': warm_up_path  # Match key expected by copy_image_files
+                    }
+                    frame_data['images'].append(frame_info)
+
+                    # Add detections with metadata
+                    for detection in results['detections']:
+                        detection_with_meta = detection.copy()
+                        detection_with_meta.update({
+                            'timestamp': frame_info['timestamp'],
+                            'image_path': image_path
+                        })
+                        frame_data['detections'].append(detection_with_meta)
+
+                except Exception as img_error:
+                    self.ui.textEditFolderStatus.append(
+                        f"Lỗi xử lý ảnh {os.path.basename(image_path)}: {str(img_error)}"
+                    )
+                    continue
+
+            if not frame_data['images']:
+                shutil.rmtree(temp_dir)  # Clean up temporary directory
+                raise Exception("Không có ảnh nào được xử lý thành công!")
+
+            # Export the prepared data using DataExporter
+            result = self.data_exporter.export_all_frames(frame_data)
+
+            # Clean up temporary directory after export
+            shutil.rmtree(temp_dir)
+
+            if result and isinstance(result, dict):
+                QMessageBox.information(
+                    None,
+                    "Thành công",
+                    f"Đã lưu {len(frame_data['images'])} ảnh thành công!\n"
+                    f"Vị trí lưu: {result['root_dir']}"
+                )
+
+        except Exception as e:
+            # Ensure temporary directory is cleaned up on error
+            if 'temp_dir' in locals():
+                shutil.rmtree(temp_dir)
+            QMessageBox.warning(None, "Lỗi", f"Không thể lưu dữ liệu: {str(e)}")
+
     def save_selected_image(self):
         """Save currently selected image using DataExporter's export_single_frame method"""
         current_item = self.ui.listImage.currentItem()
@@ -292,75 +377,30 @@ class MultiplePictureDetector(QObject):
             # Get the results for the selected image
             results = self.detection_results[image_path]
             
-            # Prepare frames dictionary
+            # Read original image
+            original_img = cv2.imread(image_path)
+            if original_img is None:
+                raise Exception(f"Không thể đọc ảnh gốc: {image_path}")
+                
+            # Normalize image path
+            image_path = os.path.normpath(image_path).replace('\\', '/')
+                
+            # Use existing frames directly - they should already be in correct format
             frames = {
-                'original': cv2.imread(image_path),
+                'original': original_img,
                 'binding_box': results['binding_box'],
                 'warm_up': results['warm_up']
             }
             
             # Use DataExporter to save single frame
-            export_result = self.data_exporter.export_single_frame(
+            self.data_exporter.export_single_frame(
                 frames=frames,
                 detections=results['detections']
             )
-            
-            if export_result:
-                # Success - data was saved
-                root_dir = export_result['root_dir']
-                QMessageBox.information(
-                    None,
-                    "Thành công",
-                    f"Đã lưu dữ liệu thành công tại:\n{root_dir}"
-                )
-                
+             
         except Exception as e:
             QMessageBox.warning(None, "Lỗi", f"Không thể lưu dữ liệu: {str(e)}")
-                
-    def save_all_detection_data(self):
-        """Save all detection data using DataExporter's export_all_frames method"""
-        if not self.detection_results:
-            QMessageBox.warning(None, "Lỗi", "Không có dữ liệu để lưu!")
-            return
-            
-        try:
-            # Prepare data for export
-            frame_data = {
-                'images': [],
-                'detections': []
-            }
-            
-            # Convert detection results to required format
-            for image_path, results in self.detection_results.items():
-                frame_data['images'].append({
-                    'timestamp': results['timestamp'],
-                    'detections': results['detections'],
-                    'original': cv2.imread(image_path),
-                    'binding_box': results['binding_box'],
-                    'warm_up': results['warm_up'],
-                    'filename': os.path.basename(image_path)
-                })
-                frame_data['detections'].extend(results['detections'])
-                
-            # Use DataExporter to save all frames
-            export_result = self.data_exporter.export_all_frames(frame_data)
-            
-            if export_result:
-                # Success - data was saved
-                root_dir = export_result['root_dir']
-                metadata = export_result['metadata']
-                
-                QMessageBox.information(
-                    None,
-                    "Thành công",
-                    f"Đã lưu tất cả dữ liệu thành công tại:\n{root_dir}\n\n"
-                    f"Tổng số ảnh đã xử lý: {metadata['total_frames']}\n"
-                    f"Thời gian hoàn thành: {metadata['export_timestamp']}"
-                )
-            
-        except Exception as e:
-            QMessageBox.warning(None, "Lỗi", f"Không thể lưu dữ liệu: {str(e)}")
-            
+
     def cancel_processing(self):
         """Cancel ongoing processing"""
         self.processing_cancelled = True
@@ -377,14 +417,14 @@ class MultiplePictureDetector(QObject):
             
     def on_single_detection_complete(self, image_path):
         """Handle completion of single image detection"""
-        self.ui.buttonDownloadMultiPicture.setEnabled(self.ui.listImage.count() > 0)
+        self.ui.buttonSaveAllData.setEnabled(self.ui.listImage.count() > 0)
         
     def on_all_detections_complete(self):
         """Handle completion of all image detections"""
         self.ui.multiProcessBar.setVisible(False)
         self.ui.buttonCancelProcessing.setVisible(False)
         self.ui.buttonChooseFolder.setEnabled(True)
-        self.ui.buttonSaveDataDetectMulti.setEnabled(self.ui.listImage.count() > 0)
+        self.ui.buttonSaveImageChoose.setEnabled(self.ui.listImage.count() > 0)
         
         # Select first item if available
         if self.ui.listImage.count() > 0:
