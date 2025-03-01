@@ -4,28 +4,81 @@ import shutil
 import cv2
 import pandas as pd
 from datetime import datetime
-from PySide6.QtWidgets import QMessageBox, QProgressDialog, QFileDialog
+from PySide6.QtWidgets import QMessageBox, QProgressDialog, QFileDialog, QProgressBar
 from PySide6.QtCore import Qt
 
+# Define constants for save prompt types
+SAVE_TO_CONFIGURED_PATH = 0  # Save to pre-configured path
+SAVE_WITH_PROMPT = 1         # Prompt user to select path before saving
+
+
 class DataExporter:
-    def __init__(self):
-        """Initialize DataExporter class"""
-        self.last_export_path = None
-        
-    def get_destination_directory(self, title="Select directory to save data"):
+    """
+    A class to handle exporting detection data, including images and metadata.
+    
+    This class manages the export of detection results, including original images,
+    bounding box visualizations, and detection metadata in both JSON and Excel formats.
+    
+    Attributes:
+        settings: Application settings object containing save_path and save_prompt_type
+        last_export_path: String storing the last used export path
+    """
+
+    def __init__(self, settings):
         """
-        Show file dialog to get destination directory from user
+        Initialize DataExporter class
         
         Args:
-            title: Dialog window title
+            settings: Application settings object with save_path and save_prompt_type
+        """
+        self.settings = settings
+        self.last_export_path = None
+        
+    def get_destination_directory(self, title="Select directory to save data", source_type="camera"):
+        """
+        Get destination directory based on settings or user selection
+        
+        Args:
+            title: Dialog window title if prompt is shown
+            source_type: Type of source ("camera" or "picture")
             
         Returns:
-            Selected directory path or None if canceled
+            str: Selected directory path or None if canceled
         """
+        # Check if we should use the configured path
+        if (hasattr(self.settings, 'save_prompt_type') and 
+            self.settings.save_prompt_type == SAVE_TO_CONFIGURED_PATH):
+            if hasattr(self.settings, 'save_path') and self.settings.save_path:
+                # Use the pre-configured path but create a subdirectory with the required format
+                base_path = self.settings.save_path
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                subfolder_name = f"detect_with_{source_type}_{timestamp}"
+                full_path = os.path.join(base_path, subfolder_name)
+                
+                # Create the directory
+                try:
+                    os.makedirs(full_path, exist_ok=True)
+                    return full_path
+                except Exception as e:
+                    QMessageBox.warning(
+                        None,
+                        "Warning",
+                        f"Could not create directory: {str(e)}. Please select a directory manually."
+                    )
+            else:
+                QMessageBox.warning(
+                    None,
+                    "Warning",
+                    "No save path configured in settings. Please select a directory."
+                )
+        
+        # Show dialog to select directory
         directory = QFileDialog.getExistingDirectory(
             None,
             title,
-            self.last_export_path or "",
+            self.last_export_path or (
+                self.settings.save_path if hasattr(self.settings, 'save_path') else ""
+            ),
             QFileDialog.ShowDirsOnly | QFileDialog.DontResolveSymlinks
         )
         
@@ -42,7 +95,7 @@ class DataExporter:
             root_dir: Root directory path
             
         Returns:
-            True if successful, False if failed
+            bool: True if successful, False if failed
         """
         try:
             subdirs = [
@@ -70,7 +123,7 @@ class DataExporter:
             prefix: Filename prefix
             
         Returns:
-            Base filename with timestamp
+            str: Base filename with timestamp
         """
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         return f"{prefix}_{timestamp}"
@@ -85,7 +138,7 @@ class DataExporter:
             base_filename: Base filename to use
             
         Returns:
-            Dictionary with destination paths
+            dict: Dictionary with destination paths
         """
         # Define destination paths
         dest_paths = {
@@ -107,7 +160,7 @@ class DataExporter:
                 shutil.copy2(source_paths[src_key], dest_paths[dst_key])
                 
         return dest_paths
-        
+    
     def save_images_directly(self, images, root_dir, base_filename):
         """
         Save images directly to destination directory
@@ -118,7 +171,7 @@ class DataExporter:
             base_filename: Base filename to use
             
         Returns:
-            Dictionary with saved file paths
+            dict: Dictionary with saved file paths
         """
         # Define destination paths
         dest_paths = {
@@ -155,7 +208,7 @@ class DataExporter:
             image_paths: Optional dictionary with relative paths to images
             
         Returns:
-            Path to saved JSON file
+            str: Path to saved JSON file
         """
         json_path = os.path.join(root_dir, 'data_json', f"{base_filename}.json")
         
@@ -181,7 +234,7 @@ class DataExporter:
             json.dump(json_data, f, indent=4)
             
         return json_path
-        
+    
     def save_excel_data(self, root_dir, base_filename, detections):
         """
         Save detection data in Excel format
@@ -192,7 +245,7 @@ class DataExporter:
             detections: List of detection objects
             
         Returns:
-            Path to saved Excel file
+            str: Path to saved Excel file
         """
         excel_path = os.path.join(root_dir, 'data_excel', f"{base_filename}.xlsx")
         
@@ -257,7 +310,7 @@ class DataExporter:
             detections: List of detection objects
             
         Returns:
-            Dictionary with paths to saved files or None if canceled
+            dict: Dictionary with paths to saved files or None if canceled
         """
         # Check if valid data exists
         required_frames = ['original', 'binding_box', 'warm_up']
@@ -265,7 +318,7 @@ class DataExporter:
             QMessageBox.warning(None, "Error", "No frame or detection data to save!")
             return None
 
-        # Let user select destination directory
+        # Get destination directory based on save_prompt_type
         root_dir = self.get_destination_directory("Select directory for frame export")
         if not root_dir:
             return None
@@ -286,8 +339,11 @@ class DataExporter:
             json_path = self.save_json_data(root_dir, base_filename, timestamp, detections)
             excel_path = self.save_excel_data(root_dir, base_filename, detections)
 
-            QMessageBox.information(None, "Success", 
-                f"Frame exported to:\n{root_dir}")
+            QMessageBox.information(
+                None,
+                "Success", 
+                f"Frame exported to:\n{root_dir}"
+            )
                 
             return {
                 'root_dir': root_dir,
@@ -300,7 +356,7 @@ class DataExporter:
         except Exception as e:
             QMessageBox.critical(None, "Error", f"Error exporting frame: {str(e)}")
             return None
-            
+        
     def export_all_frames(self, frame_data):
         """
         Export all frames with detection data
@@ -309,24 +365,40 @@ class DataExporter:
             frame_data: Dictionary with 'images' and 'detections' lists
             
         Returns:
-            Dictionary with export info or None if canceled
+            dict: Dictionary with export info or None if canceled
         """
         # Check if data exists
         if not frame_data.get('images') or not frame_data.get('detections'):
             QMessageBox.warning(None, "Error", "No detection data to save!")
             return None
 
-        # Let user select destination directory
+        # Get destination directory based on save_prompt_type
         root_dir = self.get_destination_directory("Select directory for all frames export")
         if not root_dir:
             return None
 
         try:
-            # Create progress dialog
-            progress = QProgressDialog("Saving data...", "Cancel", 0, len(frame_data['images']), None)
-            progress.setWindowModality(Qt.WindowModal)
+            # Create a custom progress dialog
+            progress = QProgressDialog(None)
             progress.setWindowTitle("Saving Progress")
+            progress.setLabelText("Initializing...")
+            progress.setCancelButtonText("Cancel")
+            progress.setWindowModality(Qt.WindowModal)
             progress.setMinimumDuration(0)
+            
+            # Set size and style
+            progress.setMinimumWidth(400)  # Wider dialog
+            progress.setMinimumHeight(100)  # Taller dialog
+            
+            # Style the progress bar
+            progress_bar = progress.findChild(QProgressBar)
+            if progress_bar:
+                progress_bar.setTextVisible(True)  # Show percentage
+                progress_bar.setFormat("%v/%m (%p%)")  # Custom format
+                
+            # Set range
+            total_frames = len(frame_data['images'])
+            progress.setRange(0, total_frames)
             
             # Create subdirectories
             if not self.create_output_directories(root_dir):
@@ -345,7 +417,10 @@ class DataExporter:
                     break
                     
                 progress.setValue(i)
-                progress.setLabelText(f"Saving frame {i+1}/{len(frame_data['images'])}...")
+                progress.setLabelText(
+                    f"Processing frame {i+1} of {total_frames}\n"
+                    f"Saving to: {root_dir}"
+                )
                 
                 # Extract frame information
                 timestamp = frame_info['timestamp']
@@ -358,29 +433,105 @@ class DataExporter:
                     all_paths['image_paths'].append(paths)
                     
                     # Save JSON and Excel data
-                    json_path = self.save_json_data(root_dir, base_filename, timestamp, detections)
+                    json_path = self.save_json_data(
+                        root_dir,
+                        base_filename,
+                        timestamp,
+                        detections
+                    )
                     all_paths['json_paths'].append(json_path)
                     
-                    excel_path = self.save_excel_data(root_dir, base_filename, detections)
+                    excel_path = self.save_excel_data(
+                        root_dir,
+                        base_filename,
+                        detections
+                    )
                     all_paths['excel_paths'].append(excel_path)
                     
                 except Exception as e:
                     print(f"Error processing frame {i+1}: {str(e)}")
                     continue
 
-            progress.setValue(len(frame_data['images']))
+            progress.setValue(total_frames)
             
             if not progress.wasCanceled():
-                QMessageBox.information(None, "Success", 
-                    f"All frames exported to:\n{root_dir}")
+                # Create metadata file with export information
+                metadata = {
+                    'export_timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    'exported_by': 'vinhveer',  # Using the current user's login
+                    'total_frames': total_frames,
+                    'export_location': root_dir,
+                    'frames_processed': len(all_paths['json_paths']),
+                    'successful_exports': {
+                        'images': len(all_paths['image_paths']),
+                        'json_files': len(all_paths['json_paths']),
+                        'excel_files': len(all_paths['excel_paths'])
+                    }
+                }
+                
+                # Save metadata to JSON file
+                metadata_path = os.path.join(root_dir, 'export_metadata.json')
+                with open(metadata_path, 'w') as f:
+                    json.dump(metadata, f, indent=4)
+                
+                QMessageBox.information(
+                    None, 
+                    "Success", 
+                    f"All frames exported to:\n{root_dir}\n\n"
+                    f"Total frames processed: {total_frames}\n"
+                    f"Export completed at: {metadata['export_timestamp']}"
+                )
+                
                 return {
                     'root_dir': root_dir,
                     'paths': all_paths,
-                    'frame_count': len(frame_data['images'])
+                    'frame_count': total_frames,
+                    'metadata': metadata,
+                    'metadata_path': metadata_path
                 }
             else:
+                QMessageBox.warning(
+                    None,
+                    "Export Canceled",
+                    f"Export was canceled. {len(all_paths['json_paths'])} frames were processed."
+                )
                 return None
                 
         except Exception as e:
             QMessageBox.critical(None, "Error", f"Error exporting frames: {str(e)}")
+            return None
+
+    def get_export_statistics(self, export_result):
+        """
+        Generate statistics about the export operation
+        
+        Args:
+            export_result: Dictionary containing export results
+            
+        Returns:
+            dict: Dictionary containing export statistics
+        """
+        if not export_result:
+            return None
+            
+        try:
+            stats = {
+                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'total_frames': export_result['frame_count'],
+                'files_generated': {
+                    'images': len(export_result['paths']['image_paths']),
+                    'json': len(export_result['paths']['json_paths']),
+                    'excel': len(export_result['paths']['excel_paths'])
+                },
+                'export_location': export_result['root_dir'],
+                'success_rate': (
+                    len(export_result['paths']['json_paths']) / 
+                    export_result['frame_count'] * 100
+                ) if export_result['frame_count'] > 0 else 0
+            }
+            
+            return stats
+            
+        except Exception as e:
+            print(f"Error generating export statistics: {str(e)}")
             return None

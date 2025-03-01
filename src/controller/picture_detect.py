@@ -8,11 +8,12 @@ from module.model import model_instance
 from module.detection_thread import DetectionThread
 from module.image_utils import ImageUtils
 from module.data_exporter import DataExporter
+from module.process_dialog import ProcessDialog
 
 class PictureDetector(QObject):
     detection_finished = Signal()
     
-    def __init__(self, ui):
+    def __init__(self, ui, settings):
         super().__init__()
         self.ui = ui
         self.current_image = None
@@ -20,7 +21,12 @@ class PictureDetector(QObject):
         self.processed_image_warm_up = None
         self.detection_thread = None
         self.detections = None
-        self.data_exporter = DataExporter()
+        self.settings = settings
+        self.data_exporter = DataExporter(settings=self.settings)
+        
+        # Tạo process dialog
+        self.process_dialog = ProcessDialog()
+        
         self.setup_ui()
         self.setup_ui_connections()
         
@@ -43,7 +49,11 @@ class PictureDetector(QObject):
         
     def select_picture(self):
         """Xử lý chọn ảnh từ file"""
-        self.ui.processBarPicture.hide()
+        if model_instance.model is None:
+            QMessageBox.warning(None, "Lỗi", "Chưa tải Model. Vui lòng tải Model trước!")
+            self.reset_ui()
+            return
+
         file_path, _ = QFileDialog.getOpenFileName(
             None,
             "Chọn hình ảnh",
@@ -53,9 +63,8 @@ class PictureDetector(QObject):
         
         if file_path:
             try:
-                # Hiển thị progress bar
-                self.ui.processBarPicture.setRange(0, 0)
-                self.ui.processBarPicture.show()
+                # Hiển thị process dialog thay vì progress bar
+                self.process_dialog.show()
                 
                 # Sử dụng ImageUtils để đọc và chuyển đổi ảnh
                 image = cv2.imread(file_path)
@@ -63,10 +72,6 @@ class PictureDetector(QObject):
                     raise ValueError("Không thể đọc file ảnh")
                 
                 self.current_image = ImageUtils.convert_bgr_to_rgb(image)
-                
-                # Thay đổi dòng này:
-                # self.update_display(self.current_image)
-                # Thành:
                 ImageUtils.display_image_in_widget(self.current_image, self.ui.framePictureBindingBox)
                 
                 # Start processing in thread
@@ -75,14 +80,10 @@ class PictureDetector(QObject):
             except Exception as e:
                 QMessageBox.warning(None, "Lỗi", f"Không thể tải hình ảnh: {str(e)}")
                 self.reset_ui()
+                self.process_dialog.hide()
 
     def detect_static_image(self, image_path):
         """Xử lý ảnh tĩnh với DetectionThread module"""
-        if model_instance.model is None:
-            QMessageBox.warning(None, "Lỗi", "Chưa tải Model. Vui lòng tải Model trước!")
-            self.reset_ui()
-            return
-            
         # Tạo và cấu hình DetectionThread
         self.detection_thread = DetectionThread(0)  # camera_index không quan trọng cho ảnh tĩnh
         self.detection_thread.frame_signal.connect(self.handle_frame_update)
@@ -111,6 +112,8 @@ class PictureDetector(QObject):
         """Xử lý lỗi từ DetectionThread"""
         QMessageBox.warning(None, "Lỗi", error_message)
         self.reset_ui()
+        # Ẩn process dialog khi có lỗi
+        self.process_dialog.hide()
 
     def handle_static_detection_complete(self, results):
         """Xử lý kết quả detection ảnh tĩnh hoàn thành"""
@@ -129,7 +132,8 @@ class PictureDetector(QObject):
             self.ui.buttonDownloadPictureWarmUp.setEnabled(True)
             self.ui.buttonSaveDataDetectImg.setEnabled(True)
         
-        self.ui.processBarPicture.hide()
+        # Ẩn process dialog
+        self.process_dialog.hide()
         self.detection_finished.emit()
 
     def update_detections_info(self, detections):

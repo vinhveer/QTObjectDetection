@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'mainxRhzdK.ui'
+## Form generated from reading UI file 'mainbhFLRx.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.8.2
 ##
@@ -28,7 +28,6 @@ class Ui_mainWindow(object):
         mainWindow.resize(974, 543)
         mainWindow.setMinimumSize(QSize(800, 400))
         font = QFont()
-        font.setFamilies([u"Segoe UI"])
         font.setPointSize(9)
         mainWindow.setFont(font)
         self.centralwidget = QWidget(mainWindow)
@@ -39,7 +38,10 @@ class Ui_mainWindow(object):
         self.main_layout.setContentsMargins(10, 10, 10, 10)
         self.modelGroup = QWidget(self.centralwidget)
         self.modelGroup.setObjectName(u"modelGroup")
-        self.modelGroup.setFont(font)
+        font1 = QFont()
+        font1.setFamilies([u"Segoe UI"])
+        font1.setPointSize(9)
+        self.modelGroup.setFont(font1)
         self.model_layout = QHBoxLayout(self.modelGroup)
         self.model_layout.setObjectName(u"model_layout")
         self.model_layout.setContentsMargins(0, 0, 0, 0)
@@ -64,7 +66,7 @@ class Ui_mainWindow(object):
 
         self.tabWidget = QTabWidget(self.centralwidget)
         self.tabWidget.setObjectName(u"tabWidget")
-        self.tabWidget.setFont(font)
+        self.tabWidget.setFont(font1)
         self.tabCamera = QWidget()
         self.tabCamera.setObjectName(u"tabCamera")
         self.gridLayout_7 = QGridLayout(self.tabCamera)
@@ -76,7 +78,7 @@ class Ui_mainWindow(object):
         self.CameraSelection.setObjectName(u"CameraSelection")
         self.labelChooseCamera = QLabel(self.tabCamera)
         self.labelChooseCamera.setObjectName(u"labelChooseCamera")
-        self.labelChooseCamera.setFont(font)
+        self.labelChooseCamera.setFont(font1)
 
         self.CameraSelection.addWidget(self.labelChooseCamera)
 
@@ -138,7 +140,12 @@ class Ui_mainWindow(object):
         sizePolicy1.setHeightForWidth(self.frameCameraBindingBox.sizePolicy().hasHeightForWidth())
         self.frameCameraBindingBox.setSizePolicy(sizePolicy1)
         self.frameCameraBindingBox.setMinimumSize(QSize(480, 100))
-        self.frameCameraBindingBox.setStyleSheet(u"border: 1px solid gray;")
+        font2 = QFont()
+        font2.setFamilies([u"Segoe UI"])
+        font2.setPointSize(9)
+        font2.setBold(True)
+        self.frameCameraBindingBox.setFont(font2)
+        self.frameCameraBindingBox.setStyleSheet(u"")
         self.frameCameraBindingBox.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.gridLayout_5.addWidget(self.frameCameraBindingBox, 0, 0, 1, 1)
@@ -153,7 +160,8 @@ class Ui_mainWindow(object):
         sizePolicy1.setHeightForWidth(self.frameCameraWarmUp.sizePolicy().hasHeightForWidth())
         self.frameCameraWarmUp.setSizePolicy(sizePolicy1)
         self.frameCameraWarmUp.setMinimumSize(QSize(480, 100))
-        self.frameCameraWarmUp.setStyleSheet(u"border: 1px solid gray;")
+        self.frameCameraWarmUp.setFont(font2)
+        self.frameCameraWarmUp.setStyleSheet(u"")
         self.frameCameraWarmUp.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.gridLayout_8.addWidget(self.frameCameraWarmUp, 0, 0, 1, 1)
@@ -237,7 +245,9 @@ class Ui_mainWindow(object):
         self.gridLayout_2.setObjectName(u"gridLayout_2")
         self.framePictureBindingBox = QLabel(self.tabImageBindingBox)
         self.framePictureBindingBox.setObjectName(u"framePictureBindingBox")
-        self.framePictureBindingBox.setStyleSheet(u"border: 1px solid gray")
+        self.framePictureBindingBox.setFont(font2)
+        self.framePictureBindingBox.setStyleSheet(u"")
+        self.framePictureBindingBox.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.gridLayout_2.addWidget(self.framePictureBindingBox, 0, 0, 1, 1)
 
@@ -248,10 +258,15 @@ class Ui_mainWindow(object):
         self.gridLayout.setObjectName(u"gridLayout")
         self.framePictureWarmUp = QLabel(self.tabPictureWarmUp)
         self.framePictureWarmUp.setObjectName(u"framePictureWarmUp")
-        sizePolicy1.setHeightForWidth(self.framePictureWarmUp.sizePolicy().hasHeightForWidth())
-        self.framePictureWarmUp.setSizePolicy(sizePolicy1)
-        self.framePictureWarmUp.setMinimumSize(QSize(480, 100))
-        self.framePictureWarmUp.setStyleSheet(u"border: 1px solid gray;")
+        sizePolicy3 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
+        sizePolicy3.setHorizontalStretch(1)
+        sizePolicy3.setVerticalStretch(0)
+        sizePolicy3.setHeightForWidth(self.framePictureWarmUp.sizePolicy().hasHeightForWidth())
+        self.framePictureWarmUp.setSizePolicy(sizePolicy3)
+        self.framePictureWarmUp.setMinimumSize(QSize(0, 0))
+        self.framePictureWarmUp.setFont(font2)
+        self.framePictureWarmUp.setStyleSheet(u"")
+        self.framePictureWarmUp.setScaledContents(False)
         self.framePictureWarmUp.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.gridLayout.addWidget(self.framePictureWarmUp, 0, 0, 1, 1)
@@ -305,13 +320,13 @@ class Ui_mainWindow(object):
 
         self.buttonSaveDataDetectMulti = QPushButton(self.tabMultiImage)
         self.buttonSaveDataDetectMulti.setObjectName(u"buttonSaveDataDetectMulti")
-        self.buttonSaveDataDetectMulti.setMinimumSize(QSize(130, 0))
+        self.buttonSaveDataDetectMulti.setMinimumSize(QSize(230, 0))
 
         self.folderControls.addWidget(self.buttonSaveDataDetectMulti)
 
         self.buttonDownloadMultiPicture = QPushButton(self.tabMultiImage)
         self.buttonDownloadMultiPicture.setObjectName(u"buttonDownloadMultiPicture")
-        self.buttonDownloadMultiPicture.setMinimumSize(QSize(170, 0))
+        self.buttonDownloadMultiPicture.setMinimumSize(QSize(250, 0))
 
         self.folderControls.addWidget(self.buttonDownloadMultiPicture)
 
@@ -320,35 +335,36 @@ class Ui_mainWindow(object):
 
         self.listImage = QListWidget(self.tabMultiImage)
         self.listImage.setObjectName(u"listImage")
-        sizePolicy3 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
-        sizePolicy3.setHorizontalStretch(0)
-        sizePolicy3.setVerticalStretch(0)
-        sizePolicy3.setHeightForWidth(self.listImage.sizePolicy().hasHeightForWidth())
-        self.listImage.setSizePolicy(sizePolicy3)
+        sizePolicy4 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
+        sizePolicy4.setHorizontalStretch(0)
+        sizePolicy4.setVerticalStretch(0)
+        sizePolicy4.setHeightForWidth(self.listImage.sizePolicy().hasHeightForWidth())
+        self.listImage.setSizePolicy(sizePolicy4)
         self.listImage.setMinimumSize(QSize(150, 0))
 
         self.gridLayout_12.addWidget(self.listImage, 1, 0, 1, 1)
 
         self.tabWidgetResultFolder = QTabWidget(self.tabMultiImage)
         self.tabWidgetResultFolder.setObjectName(u"tabWidgetResultFolder")
-        sizePolicy4 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        sizePolicy4.setHorizontalStretch(0)
-        sizePolicy4.setVerticalStretch(0)
-        sizePolicy4.setHeightForWidth(self.tabWidgetResultFolder.sizePolicy().hasHeightForWidth())
-        self.tabWidgetResultFolder.setSizePolicy(sizePolicy4)
+        sizePolicy5 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        sizePolicy5.setHorizontalStretch(0)
+        sizePolicy5.setVerticalStretch(0)
+        sizePolicy5.setHeightForWidth(self.tabWidgetResultFolder.sizePolicy().hasHeightForWidth())
+        self.tabWidgetResultFolder.setSizePolicy(sizePolicy5)
         self.tabResultBindingBox = QWidget()
         self.tabResultBindingBox.setObjectName(u"tabResultBindingBox")
         self.gridLayout_10 = QGridLayout(self.tabResultBindingBox)
         self.gridLayout_10.setObjectName(u"gridLayout_10")
         self.frameFolderBindingBox = QLabel(self.tabResultBindingBox)
         self.frameFolderBindingBox.setObjectName(u"frameFolderBindingBox")
-        sizePolicy5 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        sizePolicy5.setHorizontalStretch(3)
-        sizePolicy5.setVerticalStretch(0)
-        sizePolicy5.setHeightForWidth(self.frameFolderBindingBox.sizePolicy().hasHeightForWidth())
-        self.frameFolderBindingBox.setSizePolicy(sizePolicy5)
+        sizePolicy6 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        sizePolicy6.setHorizontalStretch(3)
+        sizePolicy6.setVerticalStretch(0)
+        sizePolicy6.setHeightForWidth(self.frameFolderBindingBox.sizePolicy().hasHeightForWidth())
+        self.frameFolderBindingBox.setSizePolicy(sizePolicy6)
         self.frameFolderBindingBox.setMinimumSize(QSize(480, 100))
-        self.frameFolderBindingBox.setStyleSheet(u"border: 1px solid gray;")
+        self.frameFolderBindingBox.setFont(font2)
+        self.frameFolderBindingBox.setStyleSheet(u"")
         self.frameFolderBindingBox.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.gridLayout_10.addWidget(self.frameFolderBindingBox, 0, 0, 1, 1)
@@ -360,7 +376,9 @@ class Ui_mainWindow(object):
         self.gridLayout_13.setObjectName(u"gridLayout_13")
         self.frameFolderWarmUp = QLabel(self.tabResultWarmUp)
         self.frameFolderWarmUp.setObjectName(u"frameFolderWarmUp")
-        self.frameFolderWarmUp.setStyleSheet(u"border: 1px solid gray")
+        self.frameFolderWarmUp.setFont(font2)
+        self.frameFolderWarmUp.setStyleSheet(u"")
+        self.frameFolderWarmUp.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.gridLayout_13.addWidget(self.frameFolderWarmUp, 0, 0, 1, 1)
 
@@ -387,6 +405,40 @@ class Ui_mainWindow(object):
         self.tabSettings.setObjectName(u"tabSettings")
         self.gridLayout_9 = QGridLayout(self.tabSettings)
         self.gridLayout_9.setObjectName(u"gridLayout_9")
+        self.label_2 = QLabel(self.tabSettings)
+        self.label_2.setObjectName(u"label_2")
+        font3 = QFont()
+        font3.setFamilies([u"Segoe UI"])
+        font3.setPointSize(14)
+        self.label_2.setFont(font3)
+
+        self.gridLayout_9.addWidget(self.label_2, 0, 0, 1, 1)
+
+        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+
+        self.gridLayout_9.addItem(self.verticalSpacer, 2, 0, 1, 1)
+
+        self.verticalSpacer_2 = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+
+        self.gridLayout_9.addItem(self.verticalSpacer_2, 7, 0, 1, 1)
+
+        self.label = QLabel(self.tabSettings)
+        self.label.setObjectName(u"label")
+
+        self.gridLayout_9.addWidget(self.label, 5, 0, 1, 1)
+
+        self.comboBoxChooseTypeSaveData = QComboBox(self.tabSettings)
+        self.comboBoxChooseTypeSaveData.addItem("")
+        self.comboBoxChooseTypeSaveData.addItem("")
+        self.comboBoxChooseTypeSaveData.setObjectName(u"comboBoxChooseTypeSaveData")
+
+        self.gridLayout_9.addWidget(self.comboBoxChooseTypeSaveData, 6, 0, 1, 1)
+
+        self.label_3 = QLabel(self.tabSettings)
+        self.label_3.setObjectName(u"label_3")
+
+        self.gridLayout_9.addWidget(self.label_3, 3, 0, 1, 1)
+
         self.horizontalLayout_2 = QHBoxLayout()
         self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
         self.buttonSaveShot = QPushButton(self.tabSettings)
@@ -401,25 +453,7 @@ class Ui_mainWindow(object):
         self.horizontalLayout_2.addWidget(self.pathSaveShot)
 
 
-        self.gridLayout_9.addLayout(self.horizontalLayout_2, 3, 0, 1, 1)
-
-        self.label_3 = QLabel(self.tabSettings)
-        self.label_3.setObjectName(u"label_3")
-
-        self.gridLayout_9.addWidget(self.label_3, 2, 0, 1, 1)
-
-        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
-
-        self.gridLayout_9.addItem(self.verticalSpacer, 1, 0, 1, 1)
-
-        self.label_2 = QLabel(self.tabSettings)
-        self.label_2.setObjectName(u"label_2")
-        font1 = QFont()
-        font1.setFamilies([u"Segoe UI"])
-        font1.setPointSize(14)
-        self.label_2.setFont(font1)
-
-        self.gridLayout_9.addWidget(self.label_2, 0, 0, 1, 1)
+        self.gridLayout_9.addLayout(self.horizontalLayout_2, 4, 0, 1, 1)
 
         self.horizontalLayout = QHBoxLayout()
         self.horizontalLayout.setObjectName(u"horizontalLayout")
@@ -427,18 +461,19 @@ class Ui_mainWindow(object):
 
         self.horizontalLayout.addItem(self.horizontalSpacer_5)
 
-        self.pushButton_2 = QPushButton(self.tabSettings)
-        self.pushButton_2.setObjectName(u"pushButton_2")
-        self.pushButton_2.setMinimumSize(QSize(150, 0))
+        self.buttonSaveSettings = QPushButton(self.tabSettings)
+        self.buttonSaveSettings.setObjectName(u"buttonSaveSettings")
+        self.buttonSaveSettings.setMinimumSize(QSize(150, 0))
 
-        self.horizontalLayout.addWidget(self.pushButton_2)
+        self.horizontalLayout.addWidget(self.buttonSaveSettings)
 
 
-        self.gridLayout_9.addLayout(self.horizontalLayout, 5, 0, 1, 1)
+        self.gridLayout_9.addLayout(self.horizontalLayout, 8, 0, 1, 1)
 
-        self.verticalSpacer_2 = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+        self.label_4 = QLabel(self.tabSettings)
+        self.label_4.setObjectName(u"label_4")
 
-        self.gridLayout_9.addItem(self.verticalSpacer_2, 4, 0, 1, 1)
+        self.gridLayout_9.addWidget(self.label_4, 1, 0, 1, 1)
 
         self.tabWidget.addTab(self.tabSettings, "")
 
@@ -454,7 +489,7 @@ class Ui_mainWindow(object):
         self.tabWidget.setCurrentIndex(0)
         self.tabWidgetCamera.setCurrentIndex(0)
         self.tabWidgetPicture.setCurrentIndex(0)
-        self.tabWidgetResultFolder.setCurrentIndex(1)
+        self.tabWidgetResultFolder.setCurrentIndex(0)
 
 
         QMetaObject.connectSlotsByName(mainWindow)
@@ -469,9 +504,9 @@ class Ui_mainWindow(object):
         self.buttonCapture.setText(QCoreApplication.translate("mainWindow", u"Ch\u1ee5p l\u1ea1i frame hi\u1ec7n t\u1ea1i", None))
         self.buttonDetect.setText(QCoreApplication.translate("mainWindow", u"B\u1eaft \u0111\u1ea7u nh\u1eadn di\u1ec7n", None))
         self.buttonSaveAllDetectCam.setText(QCoreApplication.translate("mainWindow", u"L\u01b0u to\u00e0n b\u1ed9 d\u1eef li\u1ec7u", None))
-        self.frameCameraBindingBox.setText("")
+        self.frameCameraBindingBox.setText(QCoreApplication.translate("mainWindow", u"Nh\u1ea5n \"B\u1eaft \u0111\u1ea7u ch\u1ecdn h\u00ecnh \u1ea3nh\" \u0111\u1ec3 hi\u1ec7n khung h\u00ecnh xem tr\u01b0\u1edbc", None))
         self.tabWidgetCamera.setTabText(self.tabWidgetCamera.indexOf(self.tabBindingBoxCamera), QCoreApplication.translate("mainWindow", u"H\u00ecnh \u1ea3nh (Binding Box)", None))
-        self.frameCameraWarmUp.setText("")
+        self.frameCameraWarmUp.setText(QCoreApplication.translate("mainWindow", u"Nh\u1ea5n \"B\u1eaft \u0111\u1ea7u ch\u1ecdn h\u00ecnh \u1ea3nh\" \u0111\u1ec3 hi\u1ec7n khung h\u00ecnh xem tr\u01b0\u1edbc", None))
         self.tabWidgetCamera.setTabText(self.tabWidgetCamera.indexOf(self.tabWarmUpCamera), QCoreApplication.translate("mainWindow", u"H\u00ecnh \u1ea3nh (Warm Up)", None))
         self.tabWidgetCamera.setTabText(self.tabWidgetCamera.indexOf(self.tabStatusCamera), QCoreApplication.translate("mainWindow", u"Tr\u1ea1ng th\u00e1i", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabCamera), QCoreApplication.translate("mainWindow", u"Nh\u1eadn di\u1ec7n qua Camera", None))
@@ -479,25 +514,30 @@ class Ui_mainWindow(object):
         self.buttonSaveDataDetectImg.setText(QCoreApplication.translate("mainWindow", u"L\u01b0u d\u1eef li\u1ec7u nh\u1eadn di\u1ec7n (.xlsx)", None))
         self.buttonDownloadPictureBindingBox.setText(QCoreApplication.translate("mainWindow", u"L\u01b0u h\u00ecnh \u1ea3nh (Binding Box)", None))
         self.buttonDownloadPictureWarmUp.setText(QCoreApplication.translate("mainWindow", u"L\u01b0u h\u00ecnh \u1ea3nh (Warm Up)", None))
-        self.framePictureBindingBox.setText("")
+        self.framePictureBindingBox.setText(QCoreApplication.translate("mainWindow", u"Nh\u1ea5n \"Ch\u1ecdn t\u1eadp tin h\u00ecnh \u1ea3nh\" \u0111\u1ec3 b\u1eaft \u0111\u1ea7u", None))
         self.tabWidgetPicture.setTabText(self.tabWidgetPicture.indexOf(self.tabImageBindingBox), QCoreApplication.translate("mainWindow", u"K\u1ebft qu\u1ea3 (Binding Box)", None))
-        self.framePictureWarmUp.setText("")
+        self.framePictureWarmUp.setText(QCoreApplication.translate("mainWindow", u"Nh\u1ea5n \"Ch\u1ecdn t\u1eadp tin h\u00ecnh \u1ea3nh\" \u0111\u1ec3 b\u1eaft \u0111\u1ea7u", None))
         self.tabWidgetPicture.setTabText(self.tabWidgetPicture.indexOf(self.tabPictureWarmUp), QCoreApplication.translate("mainWindow", u"K\u1ebft qu\u1ea3 (Warm Up)", None))
         self.tabWidgetPicture.setTabText(self.tabWidgetPicture.indexOf(self.tab), QCoreApplication.translate("mainWindow", u"Tr\u1ea1ng th\u00e1i", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabPicture), QCoreApplication.translate("mainWindow", u"Nh\u1eadn di\u1ec7n h\u00ecnh \u1ea3nh", None))
         self.buttonChooseFolder.setText(QCoreApplication.translate("mainWindow", u"Ch\u1ecdn th\u01b0 m\u1ee5c ...", None))
-        self.buttonSaveDataDetectMulti.setText(QCoreApplication.translate("mainWindow", u"L\u01b0u d\u1eef li\u1ec7u nh\u1eadn di\u1ec7n", None))
-        self.buttonDownloadMultiPicture.setText(QCoreApplication.translate("mainWindow", u"T\u1ea3i v\u1ec1 h\u00ecnh \u1ea3nh \u0111\u00e3 nh\u1eadn di\u1ec7n", None))
-        self.frameFolderBindingBox.setText("")
+        self.buttonSaveDataDetectMulti.setText(QCoreApplication.translate("mainWindow", u"L\u01b0u d\u1eef li\u1ec7u nh\u1eadn di\u1ec7n (\u1ea2nh hi\u1ec7n t\u1ea1i)", None))
+        self.buttonDownloadMultiPicture.setText(QCoreApplication.translate("mainWindow", u"L\u01b0u d\u1eef li\u1ec7u nh\u1eadn di\u1ec7n (To\u00e0n b\u1ed9 h\u00ecnh \u1ea3nh)", None))
+        self.frameFolderBindingBox.setText(QCoreApplication.translate("mainWindow", u"Nh\u1ea5n \"Ch\u1ecdn th\u01b0 m\u1ee5c\" \u0111\u1ec3 b\u1eaft \u0111\u1ea7u", None))
         self.tabWidgetResultFolder.setTabText(self.tabWidgetResultFolder.indexOf(self.tabResultBindingBox), QCoreApplication.translate("mainWindow", u"H\u00ecnh \u1ea3nh (Binding Box)", None))
-        self.frameFolderWarmUp.setText("")
+        self.frameFolderWarmUp.setText(QCoreApplication.translate("mainWindow", u"Nh\u1ea5n \"Ch\u1ecdn th\u01b0 m\u1ee5c\" \u0111\u1ec3 b\u1eaft \u0111\u1ea7u", None))
         self.tabWidgetResultFolder.setTabText(self.tabWidgetResultFolder.indexOf(self.tabResultWarmUp), QCoreApplication.translate("mainWindow", u"H\u00ecnh \u1ea3nh (Warm Up)", None))
         self.tabWidgetResultFolder.setTabText(self.tabWidgetResultFolder.indexOf(self.tabResultStatus), QCoreApplication.translate("mainWindow", u"Tr\u1ea1ng th\u00e1i", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabMultiImage), QCoreApplication.translate("mainWindow", u"Nh\u1eadn di\u1ec7n nhi\u1ec1u h\u00ecnh \u1ea3nh", None))
-        self.buttonSaveShot.setText(QCoreApplication.translate("mainWindow", u"Ch\u1ecdn \u0111\u01b0\u1eddng d\u1eabn", None))
-        self.label_3.setText(QCoreApplication.translate("mainWindow", u"\u0110\u01b0\u1eddng d\u1eabn l\u01b0u h\u00ecnh ch\u1ee5p k\u1ebft qu\u1ea3", None))
         self.label_2.setText(QCoreApplication.translate("mainWindow", u"C\u00e0i \u0111\u1eb7t ch\u01b0\u01a1ng tr\u00ecnh", None))
-        self.pushButton_2.setText(QCoreApplication.translate("mainWindow", u"L\u01b0u c\u00e0i \u0111\u1eb7t", None))
+        self.label.setText(QCoreApplication.translate("mainWindow", u"Ph\u01b0\u01a1ng th\u1ee9c l\u01b0u t\u1eadp tin", None))
+        self.comboBoxChooseTypeSaveData.setItemText(0, QCoreApplication.translate("mainWindow", u"L\u01b0u v\u00e0o \u0111\u01b0\u1eddng d\u1eabn \u0111\u00e3 c\u00e0i \u0111\u1eb7t s\u1eb5n", None))
+        self.comboBoxChooseTypeSaveData.setItemText(1, QCoreApplication.translate("mainWindow", u"H\u1ecfi ng\u01b0\u1eddi d\u00f9ng ch\u1ecdn \u0111\u01b0\u1eddng d\u1eabn tr\u01b0\u1edbc khi l\u01b0u", None))
+
+        self.label_3.setText(QCoreApplication.translate("mainWindow", u"\u0110\u01b0\u1eddng d\u1eabn l\u01b0u h\u00ecnh ch\u1ee5p k\u1ebft qu\u1ea3", None))
+        self.buttonSaveShot.setText(QCoreApplication.translate("mainWindow", u"Ch\u1ecdn \u0111\u01b0\u1eddng d\u1eabn", None))
+        self.buttonSaveSettings.setText(QCoreApplication.translate("mainWindow", u"L\u01b0u c\u00e0i \u0111\u1eb7t", None))
+        self.label_4.setText(QCoreApplication.translate("mainWindow", u"\u0110\u1ec3 c\u00e1c thay \u0111\u1ed5i c\u00f3 hi\u1ec7u l\u1ef1c, vui l\u00f2ng ch\u1ecdn v\u00e0o \"L\u01b0u c\u00e0i \u0111\u1eb7t\" sau khi \u0111\u00e3 thi\u1ebft \u0111\u1eb7t xong.", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabSettings), QCoreApplication.translate("mainWindow", u"C\u00e0i \u0111\u1eb7t", None))
     # retranslateUi
 

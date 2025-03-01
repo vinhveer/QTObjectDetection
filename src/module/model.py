@@ -1,4 +1,5 @@
 from PySide6.QtCore import QObject
+from PySide6.QtWidgets import QMessageBox
 from ultralytics import YOLO
 
 class YOLOModel(QObject):
@@ -16,7 +17,11 @@ class YOLOModel(QObject):
                 self.class_names = self.model.names
             return True
         except Exception as e:
-            print(f"Error loading model: {e}")
+            QMessageBox.critical(
+                None,
+                "Lỗi tải Model",
+                f"Không thể tải model: {str(e)}\nVui lòng kiểm tra đường dẫn và thử lại."
+            )
             return False
         
     def detect(self, image):
@@ -55,7 +60,11 @@ class YOLOModel(QObject):
                 
             return detections
         except Exception as e:
-            print(f"Error during detection: {e}")
+            QMessageBox.critical(
+                None,
+                "Lỗi nhận diện",
+                f"Đã xảy ra lỗi trong quá trình nhận diện: {str(e)}\nVui lòng thử lại."
+            )
             return None
     
     def get_original_results(self):
@@ -77,7 +86,11 @@ class YOLOModel(QObject):
             )
             return result_image
         except Exception as e:
-            print(f"Error plotting detection: {e}")
+            QMessageBox.critical(
+                None,
+                "Lỗi hiển thị",
+                f"Đã xảy ra lỗi khi vẽ kết quả nhận diện: {str(e)}\nVui lòng thử lại."
+            )
             return image.copy()
 
 # Singleton instance

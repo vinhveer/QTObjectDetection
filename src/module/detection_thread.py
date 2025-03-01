@@ -1,4 +1,5 @@
 from PySide6.QtCore import QThread, Signal
+from PySide6.QtWidgets import QDialog, QVBoxLayout, QFormLayout, QSpinBox, QLabel, QDialogButtonBox
 import cv2
 import time
 import os
@@ -466,3 +467,58 @@ class DetectionThread(QThread):
     def stop_detection(self):
         """Stop object detection"""
         self.detecting = False
+
+class FrameSkipDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        
+        # Thiết lập cửa sổ dialog
+        self.setWindowTitle("Frame Skip Settings")
+        self.setModal(True)
+        self.setMinimumWidth(300)
+        
+        # Tạo layout
+        layout = QVBoxLayout(self)
+        
+        # Tạo form layout cho input
+        form_layout = QFormLayout()
+        
+        # Tạo spin box cho frame skip
+        self.frame_skip_spin = QSpinBox()
+        self.frame_skip_spin.setMinimum(1)
+        self.frame_skip_spin.setMaximum(30)
+        self.frame_skip_spin.setValue(1)
+        self.frame_skip_spin.setSingleStep(1)
+        
+        # Thêm tooltip giải thích
+        self.frame_skip_spin.setToolTip(
+            "Number of frames to skip between detections.\n"
+            "Higher values mean faster processing but may miss some frames.\n"
+            "Range: 1-30 frames"
+        )
+        
+        # Thêm vào form layout
+        form_layout.addRow("Frame Skip:", self.frame_skip_spin)
+        
+        # Thêm giải thích
+        info_label = QLabel(
+            "Higher values will increase speed but may miss detections.\n"
+            "Recommended range: 1-5 frames for normal use."
+        )
+        info_label.setWordWrap(True)
+        
+        # Tạo button box
+        button_box = QDialogButtonBox(
+            QDialogButtonBox.Ok | QDialogButtonBox.Cancel
+        )
+        button_box.accepted.connect(self.accept)
+        button_box.rejected.connect(self.reject)
+        
+        # Thêm các widget vào layout chính
+        layout.addLayout(form_layout)
+        layout.addWidget(info_label)
+        layout.addWidget(button_box)
+        
+    def get_frame_skip(self):
+        """Trả về giá trị frame skip được chọn"""
+        return self.frame_skip_spin.value()
