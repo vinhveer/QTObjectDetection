@@ -37,13 +37,22 @@ jobs:
       - name: Build executable with PyInstaller
         run: pyinstaller --noconsole --onefile --name ObjectDetection main.py
 
+      - name: List files after PyInstaller build
+        run: dir
+
       - name: Install Inno Setup
         run: choco install innosetup -y
+
+      - name: List Inno Setup directory to verify installation
+        run: dir "C:\Program Files (x86)\Inno Setup 6"
 
       - name: Build installer with Inno Setup
         run: |
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer_script.iss
-      
+
+      - name: List files after installer build
+        run: dir
+
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
         with:
