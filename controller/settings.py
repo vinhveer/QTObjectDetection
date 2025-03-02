@@ -1,6 +1,6 @@
 import json
 import os
-from datetime import datetime
+from pathlib import Path
 from PySide6.QtWidgets import QFileDialog, QMessageBox
 
 class Settings:
@@ -12,67 +12,28 @@ class Settings:
         self.ui = ui
         self.config_path = "configuration/.config"
         self.config_data = {}
-
         self.last_export_path = None
         
+        # Set default Downloads path
+        self.default_downloads_path = str(Path.home() / "Downloads")
+        
         # Define instance attributes
-        self.save_path = ""
-        self.save_prompt_type = self.SAVE_TO_CONFIGURED_PATH  # Default save prompt type
+        self.save_path = self.default_downloads_path
+        self.save_prompt_type = self.SAVE_TO_CONFIGURED_PATH
         
         # Define default configuration structure
         self.default_config = {
-            "save_path": "",
+            "save_path": self.default_downloads_path,
             "save_prompt_type": self.SAVE_TO_CONFIGURED_PATH,
         }
+        
+        # Create configuration directory if it doesn't exist
+        os.makedirs(os.path.dirname(self.config_path), exist_ok=True)
         
         self.load_config()
         self.init_ui()
         self.connect_signals()
-        
-    def validate_config(self):
-        """Kiểm tra và thêm các thuộc tính thiếu trong config"""
-        config_changed = False
-        
-        # Kiểm tra từng thuộc tính trong default_config
-        for key, default_value in self.default_config.items():
-            if key not in self.config_data:
-                self.config_data[key] = default_value
-                config_changed = True
-                print(f"Đã thêm thuộc tính thiếu '{key}' với giá trị mặc định: {default_value}")
-        
-        # Lưu lại nếu có thay đổi
-        if config_changed:
-            self.save_config()
-        
-    def load_config(self):
-        """Đọc tệp cấu hình"""
-        try:
-            if os.path.exists(self.config_path):
-                with open(self.config_path, 'r', encoding='utf-8') as file:
-                    self.config_data = json.load(file)
-                
-                # Kiểm tra và thêm các thuộc tính thiếu
-                self.validate_config()
-                
-                # Load vào instance attributes
-                self.save_path = self.config_data.get("save_path", "")
-                self.save_prompt_type = self.config_data.get("save_prompt_type", self.SAVE_TO_CONFIGURED_PATH)
-                
-                # Update UI
-                self.ui.pathSaveShot.setText(self.save_path)
-                self.ui.comboBoxChooseTypeSaveData.setCurrentIndex(self.save_prompt_type)
-            else:
-                # Tạo cấu hình mặc định nếu tệp không tồn tại
-                self.save_path = ""
-                self.save_prompt_type = self.SAVE_TO_CONFIGURED_PATH
-                self.config_data = self.default_config.copy()
-                self.save_config()
-        except Exception as e:
-            print(f"Lỗi khi đọc tệp cấu hình: {e}")
-            self.save_path = ""
-            self.save_prompt_type = self.SAVE_TO_CONFIGURED_PATH
-            self.config_data = self.default_config.copy()
-    
+
     def save_config(self):
         """Lưu cấu hình vào tệp"""
         try:
@@ -85,10 +46,61 @@ class Settings:
             
             with open(self.config_path, 'w', encoding='utf-8') as file:
                 json.dump(self.config_data, file, indent=4, ensure_ascii=False)
+            print(f"Đã lưu cấu hình thành công vào {self.config_path}")
         except Exception as e:
             print(f"Lỗi khi lưu tệp cấu hình: {e}")
             QMessageBox.critical(None, "Lỗi", f"Không thể lưu cấu hình: {e}")
     
+    def validate_config(self):
+        """Kiểm tra và thêm các thuộc tính thiếu trong config"""
+        config_changed = False
+        
+        # Kiểm tra từng thuộc tính trong default_config
+        for key, default_value in self.default_config.items():
+            if key not in self.config_data:
+                self.config_data[key] = default_value
+                config_changed = True
+                print(f"Đã thêm thuộc tính thiếu '{key}' với giá trị mặc định: {default_value}")
+            elif key == "save_path" and not self.config_data[key]:
+                self.config_data[key] = self.default_downloads_path
+                config_changed = True
+                print(f"Đã cập nhật đường dẫn mặc định thành: {self.default_downloads_path}")
+        
+        # Lưu lại nếu có thay đổi
+        if config_changed:
+            self.save_config()
+
+    def load_config(self):
+        """Đọc tệp cấu hình"""
+        try:
+            if os.path.exists(self.config_path):
+                with open(self.config_path, 'r', encoding='utf-8') as file:
+                    self.config_data = json.load(file)
+                
+                # Kiểm tra và thêm các thuộc tính thiếu
+                self.validate_config()
+                
+                # Load vào instance attributes
+                self.save_path = self.config_data.get("save_path", self.default_downloads_path)
+                self.save_prompt_type = self.config_data.get("save_prompt_type", self.SAVE_TO_CONFIGURED_PATH)
+            else:
+                # Tạo cấu hình mặc định nếu tệp không tồn tại
+                self.save_path = self.default_downloads_path
+                self.save_prompt_type = self.SAVE_TO_CONFIGURED_PATH
+                self.config_data = self.default_config.copy()
+                self.save_config()
+            
+            # Update UI
+            self.ui.pathSaveShot.setText(self.save_path)
+            self.ui.comboBoxChooseTypeSaveData.setCurrentIndex(self.save_prompt_type)
+                
+        except Exception as e:
+            print(f"Lỗi khi đọc tệp cấu hình: {e}")
+            self.save_path = self.default_downloads_path
+            self.save_prompt_type = self.SAVE_TO_CONFIGURED_PATH
+            self.config_data = self.default_config.copy()
+            self.save_config()
+
     def init_ui(self):
         """Khởi tạo UI với dữ liệu từ cấu hình"""
         # Thiết lập đường dẫn lưu

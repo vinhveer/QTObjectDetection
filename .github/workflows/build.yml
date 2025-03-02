@@ -1,0 +1,59 @@
+name: Build Object Detection App
+
+on:
+  push:
+    tags:
+      - 'v*'  # Tự động chạy khi có tag mới (ví dụ: v1.0.0)
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+    - name: Checkout source code
+      uses: actions/checkout@v3
+
+    - name: Setup Python
+      uses: actions/setup-python@v3
+      with:
+        python-version: '3.9'
+
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+        pip install pyinstaller
+
+    - name: Build App
+      run: |
+        pyinstaller --onefile --windowed --name MyApp main.py
+
+    - name: Package Build
+      run: |
+        zip -r MyApp-${{ runner.os }}.zip dist/
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: MyApp-${{ runner.os }}
+        path: MyApp-${{ runner.os }}.zip
+
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Download Artifacts
+      uses: actions/download-artifact@v3
+      with:
+        path: artifacts/
+
+    - name: Publish Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: artifacts/**/*.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

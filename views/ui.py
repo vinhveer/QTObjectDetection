@@ -500,7 +500,7 @@ class Ui_mainWindow(object):
     # setupUi
 
     def retranslateUi(self, mainWindow):
-        mainWindow.setWindowTitle(QCoreApplication.translate("mainWindow", u"Object Detection with YOLO", None))
+        mainWindow.setWindowTitle(QCoreApplication.translate("mainWindow", u"Object Detection", None))
         self.buttonChooseModel.setText(QCoreApplication.translate("mainWindow", u"Ch\u1ecdn t\u1eadp tin Model", None))
         self.labelPictureDirect.setText(QCoreApplication.translate("mainWindow", u"Ch\u01b0a ch\u1ecdn t\u1eadp tin Model", None))
         self.labelChooseCamera.setText(QCoreApplication.translate("mainWindow", u"Ch\u1ecdn Camera", None))
