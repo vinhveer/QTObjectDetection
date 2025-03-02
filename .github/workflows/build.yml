@@ -58,41 +58,40 @@ jobs:
       run: |
         mkdir -p resources
         
-        if [[ "${{ matrix.os }}" == "macos-latest" ]]; then
-          brew install imagemagick || exit 1
+        if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
+          sudo apt-get update && sudo apt-get install -y imagemagick
+        elif [[ "${{ matrix.os }}" == "macos-latest" ]]; then
+          brew install imagemagick || true
         elif [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-          choco install imagemagick -y || exit 1
+          choco install imagemagick -y || true
         fi
         
         if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-          convert -size 256x256 xc:black -fill white -gravity center -pointsize 20 -annotate 0 "ObjectDetection" resources/icon.ico || exit 1
+          convert -size 256x256 xc:black -fill white -gravity center -pointsize 20 -annotate 0 "ObjectDetection" resources/icon.ico || echo "Could not create icon.ico"
         elif [[ "${{ matrix.os }}" == "macos-latest" ]]; then
           mkdir -p MyIcon.iconset
           for size in 16 32 64 128 256 512; do
-            convert -size ${size}x${size} xc:black -fill white -gravity center -pointsize $((size/10)) -annotate 0 "OD" MyIcon.iconset/icon_${size}x${size}.png || exit 1
-            convert -size $((size*2))x$((size*2)) xc:black -fill white -gravity center -pointsize $((size/5)) -annotate 0 "OD" MyIcon.iconset/icon_${size}x${size}@2x.png || exit 1
+            convert -size ${size}x${size} xc:black -fill white -gravity center -pointsize $((size/10)) -annotate 0 "OD" MyIcon.iconset/icon_${size}x${size}.png || true
+            convert -size $((size*2))x$((size*2)) xc:black -fill white -gravity center -pointsize $((size/5)) -annotate 0 "OD" MyIcon.iconset/icon_${size}x${size}@2x.png || true
           done
-          iconutil -c icns MyIcon.iconset -o resources/icon.icns || exit 1
+          iconutil -c icns MyIcon.iconset -o resources/icon.icns || echo "Could not create icon.icns"
+        elif [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
+          convert -size 256x256 xc:black -fill white -gravity center -pointsize 20 -annotate 0 "ObjectDetection" resources/icon.png || echo "Could not create icon.png"
         fi
-      continue-on-error: false
+      continue-on-error: true
     
     - name: Build App for Windows
       if: matrix.os == 'windows-latest'
       shell: bash
       run: |
-        # Build with PyInstaller, only include --icon if file exists
-        ICON_OPT=""
-        if [ -f resources/icon.ico ]; then
-          ICON_OPT="--icon=resources/icon.ico"
-        fi
-        pyinstaller --name ObjectDetection --windowed $ICON_OPT --add-data "*.py;." --add-data "controller;controller" --add-data "module;module" --add-data "views;views" --add-data "ui;ui" --add-data "configuration;configuration" main.py || exit 1
+        # Build with PyInstaller
+        pyinstaller --name ObjectDetection --windowed --icon=resources/icon.ico --add-data "*.py;." --add-data "controller;controller" --add-data "module;module" --add-data "views;views" --add-data "ui;ui" --add-data "configuration;configuration" main.py || exit 1
         
-        # Create NSIS script with author and version info
+        # Create NSIS script
         cat << EOF > installer.nsi
         !include "MUI2.nsh"
         !define APP_NAME "ObjectDetection"
-        !define VERSION "$VERSION"  ; Use cleaned version (without 'v')
-        !define AUTHOR "vinhveer"
+        !define VERSION "$RAW_VERSION"
         !define INSTALLER_NAME "ObjectDetection-$RAW_VERSION-Setup.exe"
         !define MAIN_APP_EXE "ObjectDetection.exe"
         
@@ -108,14 +107,6 @@ jobs:
         OutFile "\${INSTALLER_NAME}"
         InstallDir "\$PROGRAMFILES\\\${APP_NAME}"
         ShowInstDetails show
-        
-        ; Add version info to the installer executable
-        VIProductVersion "\${VERSION}.0"  ; NSIS requires a 4-part version (e.g., 1.0.0.0)
-        VIAddVersionKey "ProductName" "\${APP_NAME}"
-        VIAddVersionKey "FileVersion" "\${VERSION}"
-        VIAddVersionKey "CompanyName" "\${AUTHOR}"
-        VIAddVersionKey "FileDescription" "Object Detection Application"
-        VIAddVersionKey "LegalCopyright" "© \${AUTHOR}"
     
         Section -MainProgram
           SetOutPath "\$INSTDIR"
@@ -128,8 +119,6 @@ jobs:
           WriteUninstaller "\$INSTDIR\\uninstall.exe"
           WriteRegStr HKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\\${APP_NAME}" "DisplayName" "\${APP_NAME}"
           WriteRegStr HKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\\${APP_NAME}" "UninstallString" "\$INSTDIR\\uninstall.exe"
-          WriteRegStr HKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\\${APP_NAME}" "Publisher" "\${AUTHOR}"
-          WriteRegStr HKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\\${APP_NAME}" "DisplayVersion" "\${VERSION}"
         SectionEnd
     
         Section "Uninstall"
@@ -150,12 +139,8 @@ jobs:
       if: matrix.os == 'macos-latest'
       shell: bash
       run: |
-        # Build with PyInstaller, only include --icon if file exists
-        ICON_OPT=""
-        if [ -f resources/icon.icns ]; then
-          ICON_OPT="--icon=resources/icon.icns"
-        fi
-        pyinstaller --name ObjectDetection --windowed $ICON_OPT --add-data "*.py:." --add-data "controller:controller" --add-data "module:module" --add-data "views:views" --add-data "ui:ui" --add-data "configuration:configuration" main.py || exit 1
+        # Build with PyInstaller
+        pyinstaller --name ObjectDetection --windowed --icon=resources/icon.icns --add-data "*.py:." --add-data "controller:controller" --add-data "module:module" --add-data "views:views" --add-data "ui:ui" --add-data "configuration:configuration" main.py || exit 1
         
         # Create DMG installer
         brew install create-dmg || brew upgrade create-dmg || echo "create-dmg installation failed"
@@ -181,7 +166,7 @@ jobs:
           ObjectDetection-${{ env.RAW_VERSION }}-Setup.exe
           ObjectDetection-${{ env.RAW_VERSION }}-Installer.dmg
           ObjectDetection-${{ env.RAW_VERSION }}-Installer.zip
-        retention-days: 5
+          ObjectDetection-${{ env.RAW_VERSION }}-Linux.tar.gz
       continue-on-error: true
 
   release:
@@ -191,6 +176,9 @@ jobs:
     permissions:
       contents: write
     steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
     - name: Download Artifacts
       uses: actions/download-artifact@v4
       with:
@@ -200,5 +188,5 @@ jobs:
       uses: softprops/action-gh-release@v1
       if: startsWith(github.ref, 'refs/tags/')
       with:
-        files: artifacts/**/*.{exe,dmg,zip}
+        files: artifacts/**/*.{exe,dmg,zip,tar.gz}
         generate_release_notes: true
