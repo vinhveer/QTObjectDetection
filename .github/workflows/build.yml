@@ -3,7 +3,7 @@ name: Build Object Detection App
 on:
   push:
     tags:
-      - 'v*'  # Tự động chạy khi có tag mới (ví dụ: v1.0.0)
+      - 'v*'  # Chạy khi có tag mới (ví dụ: v1.0.0)
 
 jobs:
   build:
@@ -15,10 +15,10 @@ jobs:
 
     steps:
     - name: Checkout source code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Setup Python
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v4
       with:
         python-version: '3.9'
 
@@ -36,7 +36,7 @@ jobs:
         zip -r MyApp-${{ runner.os }}.zip dist/
 
     - name: Upload Artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: MyApp-${{ runner.os }}
         path: MyApp-${{ runner.os }}.zip
@@ -47,7 +47,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Download Artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         path: artifacts/
 
