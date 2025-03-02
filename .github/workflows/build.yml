@@ -29,11 +29,17 @@ jobs:
       shell: bash
       run: |
         if [[ "$GITHUB_REF" == refs/tags/* ]]; then
-          echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+          # Store raw version with v prefix
+          echo "RAW_VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+          # Store cleaned version without v prefix for debian packages
+          CLEAN_VERSION=${GITHUB_REF#refs/tags/v}
+          echo "VERSION=${CLEAN_VERSION}" >> $GITHUB_ENV
         elif [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
-          echo "VERSION=manual-$(date +%Y%m%d-%H%M%S)" >> $GITHUB_ENV
+          echo "RAW_VERSION=manual-$(date +%Y%m%d-%H%M%S)" >> $GITHUB_ENV
+          echo "VERSION=0.0.1.$(date +%Y%m%d%H%M%S)" >> $GITHUB_ENV
         else
-          echo "VERSION=dev-build" >> $GITHUB_ENV
+          echo "RAW_VERSION=dev-build" >> $GITHUB_ENV
+          echo "VERSION=0.0.1.$(date +%Y%m%d%H%M%S)" >> $GITHUB_ENV
         fi
     
     - name: Setup Python
@@ -89,8 +95,8 @@ jobs:
         @"
         !include "MUI2.nsh"
         !define APP_NAME "ObjectDetection"
-        !define VERSION "$env:VERSION"
-        !define INSTALLER_NAME "ObjectDetection-$env:VERSION-Setup.exe"
+        !define VERSION "$env:RAW_VERSION"
+        !define INSTALLER_NAME "ObjectDetection-$env:RAW_VERSION-Setup.exe"
         !define MAIN_APP_EXE "ObjectDetection.exe"
         
         !insertmacro MUI_PAGE_WELCOME
@@ -109,6 +115,8 @@ jobs:
         Section -MainProgram
           SetOutPath "$INSTDIR"
           File /r "dist\ObjectDetection\*.*"
+          
+          # Use absolute paths for directories
           CreateDirectory "$SMPROGRAMS\${APP_NAME}"
           CreateShortCut "$SMPROGRAMS\${APP_NAME}\${APP_NAME}.lnk" "$INSTDIR\${MAIN_APP_EXE}"
           CreateShortCut "$DESKTOP\${APP_NAME}.lnk" "$INSTDIR\${MAIN_APP_EXE}"
@@ -130,7 +138,7 @@ jobs:
         "@ | Out-File -FilePath installer.nsi -Encoding utf8
         
         # Install NSIS
-        choco install nsis -y
+        choco install nsis -y --force
         & "C:\Program Files (x86)\NSIS\makensis.exe" installer.nsi
     
     - name: Build App for macOS
@@ -150,10 +158,10 @@ jobs:
           --icon "ObjectDetection.app" 200 190 \
           --hide-extension "ObjectDetection.app" \
           --app-drop-link 600 185 \
-          "ObjectDetection-${{ env.VERSION }}-Installer.dmg" \
+          "ObjectDetection-${{ env.RAW_VERSION }}-Installer.dmg" \
           "dist/ObjectDetection.app" || {
             echo "DMG creation failed, creating ZIP instead"
-            ditto -c -k --keepParent "dist/ObjectDetection.app" "ObjectDetection-${{ env.VERSION }}-Installer.zip"
+            ditto -c -k --keepParent "dist/ObjectDetection.app" "ObjectDetection-${{ env.RAW_VERSION }}-Installer.zip"
           }
     
     - name: Build App for Linux
@@ -169,6 +177,7 @@ jobs:
         
         cp -r dist/ObjectDetection/* deb_dist/usr/local/bin/ObjectDetection/
         
+        # Version must start with a digit for Debian packages
         cat > deb_dist/DEBIAN/control << EOF
         Package: objectdetection
         Version: ${{ env.VERSION }}
@@ -193,21 +202,21 @@ jobs:
         chmod +x deb_dist/usr/local/bin/ObjectDetection/ObjectDetection
         
         # Build the DEB package
-        dpkg-deb --build deb_dist ObjectDetection-${{ env.VERSION }}-Installer.deb
+        dpkg-deb --build deb_dist ObjectDetection-${{ env.RAW_VERSION }}-Installer.deb
         
         # Create tarball as additional option
-        tar -czvf ObjectDetection-${{ env.VERSION }}-Linux.tar.gz -C dist ObjectDetection
+        tar -czvf ObjectDetection-${{ env.RAW_VERSION }}-Linux.tar.gz -C dist ObjectDetection
     
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: ObjectDetection-${{ env.VERSION }}-${{ matrix.os }}-Installer
+        name: ObjectDetection-${{ env.RAW_VERSION }}-${{ matrix.os }}-Installer
         path: |
-          ObjectDetection-${{ env.VERSION }}-Setup.exe
-          ObjectDetection-${{ env.VERSION }}-Installer.dmg
-          ObjectDetection-${{ env.VERSION }}-Installer.zip
-          ObjectDetection-${{ env.VERSION }}-Installer.deb
-          ObjectDetection-${{ env.VERSION }}-Linux.tar.gz
+          ObjectDetection-${{ env.RAW_VERSION }}-Setup.exe
+          ObjectDetection-${{ env.RAW_VERSION }}-Installer.dmg
+          ObjectDetection-${{ env.RAW_VERSION }}-Installer.zip
+          ObjectDetection-${{ env.RAW_VERSION }}-Installer.deb
+          ObjectDetection-${{ env.RAW_VERSION }}-Linux.tar.gz
         retention-days: 5
       continue-on-error: true
 
