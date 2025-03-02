@@ -12,12 +12,13 @@ jobs:
     runs-on: windows-latest
     
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.10'
+        cache: 'pip'
     
     - name: Install dependencies
       run: |
@@ -37,34 +38,35 @@ jobs:
     - name: Create Inno Setup Script
       run: |
         Set-Content -Path "setup.iss" -Value @"
-          [Setup]
-          AppName=YourAppName
-          AppVersion=1.0
-          DefaultDirName={autopf}\YourAppName
-          DefaultGroupName=YourAppName
-          OutputDir=installer_output
-          OutputBaseFilename=YourAppName_Setup
-          Compression=lzma
-          SolidCompression=yes
+[Setup]
+AppName=YourAppName
+AppVersion=1.0
+DefaultDirName={autopf}\YourAppName
+DefaultGroupName=YourAppName
+OutputDir=installer_output
+OutputBaseFilename=YourAppName_Setup
+Compression=lzma
+SolidCompression=yes
 
-          [Files]
-          Source: "dist\YourAppName.exe"; DestDir: "{app}"; Flags: ignoreversion
-          ; Add other files if needed
+[Files]
+Source: "dist\YourAppName.exe"; DestDir: "{app}"; Flags: ignoreversion
+; Add other files if needed
 
-          [Icons]
-          Name: "{group}\YourAppName"; Filename: "{app}\YourAppName.exe"
-          Name: "{commondesktop}\YourAppName"; Filename: "{app}\YourAppName.exe"; Tasks: desktopicon
+[Icons]
+Name: "{group}\YourAppName"; Filename: "{app}\YourAppName.exe"
+Name: "{commondesktop}\YourAppName"; Filename: "{app}\YourAppName.exe"; Tasks: desktopicon
 
-          [Tasks]
-          Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
-          "@
+[Tasks]
+Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+"@
     
     - name: Build Installer
       run: |
         & 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' setup.iss
     
     - name: Upload Installer
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: windows-installer
         path: installer_output\YourAppName_Setup.exe
+        retention-days: 90
