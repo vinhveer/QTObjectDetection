@@ -47,10 +47,42 @@ jobs:
         fi
     
     # Windows-specific steps
+    - name: Install Visual C++ Redistributable
+      if: matrix.os == 'windows-latest'
+      run: |
+        choco install vcredist140 -y
+    
     - name: Build Windows App with PyInstaller
       if: matrix.os == 'windows-latest'
       run: |
-        pyinstaller --onedir --name MyApp main.py
+        # Create spec file for more control
+        pyi-makespec --onedir --noconsole --name ObjectDetectionWithYOLO main.py
+        
+        # Edit the spec file to add missing DLLs
+        $content = Get-Content -Path ObjectDetectionWithYOLO.spec
+        $newContent = @()
+        foreach ($line in $content) {
+          $newContent += $line
+          if ($line -match "^a = Analysis") {
+            $newContent += "import os"
+            $newContent += "from PyInstaller.utils.hooks import collect_dynamic_libs"
+            $newContent += "binaries = []"
+            $newContent += "# Add Windows SDK DLLs"
+            $newContent += "win_sdk_path = os.path.join(os.environ['SystemRoot'], 'System32')"
+            $newContent += "sdk_dlls = ['api-ms-win-shcore-scaling-l1-1-1.dll']"
+            $newContent += "for dll in sdk_dlls:"
+            $newContent += "    dll_path = os.path.join(win_sdk_path, dll)"
+            $newContent += "    if os.path.exists(dll_path):"
+            $newContent += "        binaries.append((dll_path, '.'))"
+          }
+          if ($line -match "^\s+binaries=\[\],") {
+            $newContent[-1] = "          binaries=binaries,"
+          }
+        }
+        Set-Content -Path ObjectDetectionWithYOLO.spec -Value $newContent
+        
+        # Build with the modified spec file
+        pyinstaller --clean ObjectDetectionWithYOLO.spec
     
     - name: Install MSIX Tools
       if: matrix.os == 'windows-latest'
@@ -63,18 +95,20 @@ jobs:
     
     - name: Create Windows MSIX Bundle
       if: matrix.os == 'windows-latest'
+      shell: pwsh
       run: |
         # Create AppxManifest.xml file
-        echo "<?xml version='1.0' encoding='utf-8'?>
+        @"
+        <?xml version='1.0' encoding='utf-8'?>
         <Package
           xmlns='http://schemas.microsoft.com/appx/manifest/foundation/windows10'
           xmlns:uap='http://schemas.microsoft.com/appx/manifest/uap/windows10'
           xmlns:rescap='http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities'>
-          <Identity Name='ObjectDetectionApp' 
+          <Identity Name='ObjectDetectionWithYOLO' 
                    Publisher='CN=YourCompany, O=YourOrganization, C=US' 
                    Version='${{ env.VERSION }}' />
           <Properties>
-            <DisplayName>Object Detection App</DisplayName>
+            <DisplayName>Object Detection With YOLO</DisplayName>
             <PublisherDisplayName>Your Company</PublisherDisplayName>
             <Logo>assets\\logo.png</Logo>
           </Properties>
@@ -85,10 +119,10 @@ jobs:
             <Resource Language='en-us' />
           </Resources>
           <Applications>
-            <Application Id='ObjectDetectionApp' Executable='MyApp\\MyApp.exe' EntryPoint='Windows.FullTrustApplication'>
+            <Application Id='ObjectDetectionWithYOLO' Executable='ObjectDetectionWithYOLO\\ObjectDetectionWithYOLO.exe' EntryPoint='Windows.FullTrustApplication'>
               <uap:VisualElements
-                DisplayName='Object Detection App'
-                Description='App for object detection'
+                DisplayName='Object Detection With YOLO'
+                Description='Application for object detection using YOLO'
                 BackgroundColor='transparent'
                 Square150x150Logo='assets\\logo.png'
                 Square44x44Logo='assets\\logo.png' />
@@ -97,14 +131,16 @@ jobs:
           <Capabilities>
             <rescap:Capability Name='runFullTrust' />
           </Capabilities>
-        </Package>" > AppxManifest.xml
+        </Package>
+        "@ | Out-File -FilePath AppxManifest.xml -Encoding utf8
         
         # Create assets folder and a placeholder logo
         mkdir -p assets
-        echo "<svg xmlns='http://www.w3.org/2000/svg' width='44' height='44'><rect width='44' height='44' fill='blue'/></svg>" > assets/logo.png
+        "<svg xmlns='http://www.w3.org/2000/svg' width='44' height='44'><rect width='44' height='44' fill='blue'/></svg>" | Out-File -FilePath assets/logo.png -Encoding utf8
         
         # Create the MSIX package
-        "$env:ProgramFiles(x86)\\Windows Kits\\10\\bin\\10.0.19041.0\\x64\\MakeAppx.exe" pack /d dist /p MyApp-${{ env.VERSION }}-Windows.msix /m AppxManifest.xml
+        $makeAppxPath = Join-Path -Path ${env:ProgramFiles(x86)} -ChildPath "Windows Kits\10\bin\10.0.19041.0\x64\MakeAppx.exe"
+        & $makeAppxPath pack /d dist /p "ObjectDetectionWithYOLO-${{ env.VERSION }}-Windows.msix" /m AppxManifest.xml
         
         # Create a self-signed certificate
         New-SelfSignedCertificate -Type Custom -Subject "CN=YourCompany" -KeyUsage DigitalSignature -FriendlyName "YourCompany Certificate" -CertStoreLocation "Cert:\CurrentUser\My" -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.3", "2.5.29.19={text}")
@@ -114,20 +150,23 @@ jobs:
         Export-PfxCertificate -Cert $cert -FilePath YourCompany.pfx -Password (ConvertTo-SecureString -String "password" -Force -AsPlainText)
         
         # Sign the MSIX package
-        "$env:ProgramFiles(x86)\\Windows Kits\\10\\bin\\10.0.19041.0\\x64\\SignTool.exe" sign /fd SHA256 /a /f YourCompany.pfx /p password MyApp-${{ env.VERSION }}-Windows.msix
+        $signToolPath = Join-Path -Path ${env:ProgramFiles(x86)} -ChildPath "Windows Kits\10\bin\10.0.19041.0\x64\SignTool.exe"
+        & $signToolPath sign /fd SHA256 /a /f YourCompany.pfx /p password "ObjectDetectionWithYOLO-${{ env.VERSION }}-Windows.msix"
+        
+        # Create package list file
+        "ObjectDetectionWithYOLO-${{ env.VERSION }}-Windows.msix" | Out-File -FilePath PackageFiles.txt -Encoding utf8
         
         # Create the MSIX bundle
-        "$env:ProgramFiles(x86)\\Windows Kits\\10\\bin\\10.0.19041.0\\x64\\MakeAppx.exe" bundle /d . /p MyApp-${{ env.VERSION }}-Windows.msixbundle /bf PackageFiles.txt
-        echo "MyApp-${{ env.VERSION }}-Windows.msix" > PackageFiles.txt
+        & $makeAppxPath bundle /d . /p "ObjectDetectionWithYOLO-${{ env.VERSION }}-Windows.msixbundle" /bf PackageFiles.txt
         
         # Sign the MSIX bundle
-        "$env:ProgramFiles(x86)\\Windows Kits\\10\\bin\\10.0.19041.0\\x64\\SignTool.exe" sign /fd SHA256 /a /f YourCompany.pfx /p password MyApp-${{ env.VERSION }}-Windows.msixbundle
+        & $signToolPath sign /fd SHA256 /a /f YourCompany.pfx /p password "ObjectDetectionWithYOLO-${{ env.VERSION }}-Windows.msixbundle"
     
     # macOS-specific steps
     - name: Build macOS App with PyInstaller
       if: matrix.os == 'macos-latest'
       run: |
-        pyinstaller --windowed --name MyApp main.py
+        pyinstaller --windowed --noconsole --name ObjectDetectionWithYOLO main.py
     
     - name: Install create-dmg
       if: matrix.os == 'macos-latest'
@@ -139,38 +178,38 @@ jobs:
       run: |
         # Create an application bundle structure
         mkdir -p dmg_build
-        cp -r "dist/MyApp.app" dmg_build/
+        cp -r "dist/ObjectDetectionWithYOLO.app" dmg_build/
         
         # Create the DMG file
         create-dmg \
-          --volname "MyApp ${{ env.VERSION }}" \
-          --volicon "dist/MyApp.app/Contents/Resources/icon-windowed.icns" \
+          --volname "Object Detection With YOLO ${{ env.VERSION }}" \
+          --volicon "dist/ObjectDetectionWithYOLO.app/Contents/Resources/icon-windowed.icns" \
           --window-pos 200 120 \
           --window-size 800 400 \
           --icon-size 100 \
-          --icon "MyApp.app" 200 190 \
-          --hide-extension "MyApp.app" \
+          --icon "ObjectDetectionWithYOLO.app" 200 190 \
+          --hide-extension "ObjectDetectionWithYOLO.app" \
           --app-drop-link 600 185 \
-          "MyApp-${{ env.VERSION }}-macOS.dmg" \
+          "ObjectDetectionWithYOLO-${{ env.VERSION }}-macOS.dmg" \
           "dmg_build/" || true
         
         # Verify the DMG was created
-        ls -la "MyApp-${{ env.VERSION }}-macOS.dmg" || echo "DMG creation failed"
+        ls -la "ObjectDetectionWithYOLO-${{ env.VERSION }}-macOS.dmg" || echo "DMG creation failed"
     
     - name: Upload Windows Installer
       if: matrix.os == 'windows-latest'
       uses: actions/upload-artifact@v4
       with:
-        name: MyApp-${{ env.VERSION }}-Windows-Installer
-        path: MyApp-${{ env.VERSION }}-Windows.msixbundle
+        name: ObjectDetectionWithYOLO-${{ env.VERSION }}-Windows-Installer
+        path: ObjectDetectionWithYOLO-${{ env.VERSION }}-Windows.msixbundle
         retention-days: 5
     
     - name: Upload macOS Installer
       if: matrix.os == 'macos-latest'
       uses: actions/upload-artifact@v4
       with:
-        name: MyApp-${{ env.VERSION }}-macOS-Installer
-        path: MyApp-${{ env.VERSION }}-macOS.dmg
+        name: ObjectDetectionWithYOLO-${{ env.VERSION }}-macOS-Installer
+        path: ObjectDetectionWithYOLO-${{ env.VERSION }}-macOS.dmg
         retention-days: 5
   
   release:
