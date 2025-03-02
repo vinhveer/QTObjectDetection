@@ -2,8 +2,8 @@ name: Build Object Detection App with Installer
 on:
   push:
     tags:
-      - 'v*'  # Chạy khi có tag mới (ví dụ: v1.0.0)
-  workflow_dispatch:  # Cho phép kích hoạt thủ công
+      - 'v*'  # Run when a new tag is pushed (e.g., v1.0.0)
+  workflow_dispatch:  # Allow manual triggering
 jobs:
   build:
     name: Build on ${{ matrix.os }}
@@ -48,21 +48,51 @@ jobs:
         pip install -r requirements.txt
         pip install pyinstaller
     
+    - name: Generate Default Icons
+      shell: bash
+      run: |
+        # Create resources directory
+        mkdir -p resources
+        
+        # Install ImageMagick based on OS
+        if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
+          sudo apt-get update && sudo apt-get install -y imagemagick || true
+        elif [[ "${{ matrix.os }}" == "macos-latest" ]]; then
+          brew install imagemagick || true
+        elif [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+          choco install imagemagick || true
+        fi
+        
+        # Create simple icons (platform specific)
+        if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+          convert -size 256x256 xc:black -fill white -gravity center -pointsize 20 -annotate 0 "ObjectDetection" resources/icon.ico || echo "Could not create icon.ico"
+        elif [[ "${{ matrix.os }}" == "macos-latest" ]]; then
+          # For macOS - Create a simple icns
+          mkdir -p MyIcon.iconset
+          for size in 16 32 64 128 256 512; do
+            convert -size ${size}x${size} xc:black -fill white -gravity center -pointsize $((size/10)) -annotate 0 "OD" MyIcon.iconset/icon_${size}x${size}.png || true
+            convert -size $((size*2))x$((size*2)) xc:black -fill white -gravity center -pointsize $((size/5)) -annotate 0 "OD" MyIcon.iconset/icon_${size}x${size}@2x.png || true
+          done
+          iconutil -c icns MyIcon.iconset -o resources/icon.icns || echo "Could not create icon.icns"
+        elif [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
+          convert -size 256x256 xc:black -fill white -gravity center -pointsize 20 -annotate 0 "ObjectDetection" resources/icon.png || echo "Could not create icon.png"
+        fi
+      continue-on-error: true
+    
     - name: Build App for Windows
       if: matrix.os == 'windows-latest'
       run: |
-        pyinstaller --name MyApp --windowed --add-data "*.py;." --add-data "controller;controller" --add-data "module;module" --add-data "views;views" --add-data "ui;ui" --add-data "configuration;configuration" --icon "icon.ico" main.py
+        # Build with basic configuration
+        pyinstaller --name ObjectDetection --windowed --add-data "*.py;." --add-data "controller;controller" --add-data "module;module" --add-data "views;views" --add-data "ui;ui" --add-data "configuration;configuration" main.py
         
-        # Tạo tệp cấu hình NSIS
+        # Create NSIS config file
         @"
         !include "MUI2.nsh"
-        !define APP_NAME "Object Detection App"
+        !define APP_NAME "ObjectDetection"
         !define VERSION "$env:VERSION"
-        !define INSTALLER_NAME "MyApp-$env:VERSION-Setup.exe"
-        !define MAIN_APP_EXE "MyApp.exe"
-        !define MUI_ICON "icon.ico"
-        !define MUI_UNICON "icon.ico"
-
+        !define INSTALLER_NAME "ObjectDetection-$env:VERSION-Setup.exe"
+        !define MAIN_APP_EXE "ObjectDetection.exe"
+        
         !insertmacro MUI_PAGE_WELCOME
         !insertmacro MUI_PAGE_DIRECTORY
         !insertmacro MUI_PAGE_INSTFILES
@@ -78,75 +108,108 @@ jobs:
 
         Section -MainProgram
           SetOutPath "$INSTDIR"
-          File /r "dist\MyApp\*.*"
+          File /r "dist\ObjectDetection\*.*"
+          CreateDirectory "$SMPROGRAMS\${APP_NAME}"
           CreateShortCut "$SMPROGRAMS\${APP_NAME}\${APP_NAME}.lnk" "$INSTDIR\${MAIN_APP_EXE}"
           CreateShortCut "$DESKTOP\${APP_NAME}.lnk" "$INSTDIR\${MAIN_APP_EXE}"
+          
+          # Create uninstaller
+          WriteUninstaller "$INSTDIR\uninstall.exe"
+          WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "DisplayName" "${APP_NAME}"
+          WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "UninstallString" "$INSTDIR\uninstall.exe"
         SectionEnd
 
-        Section Uninstall
+        Section "Uninstall"
+          Delete "$INSTDIR\uninstall.exe"
           RMDir /r "$INSTDIR"
           Delete "$SMPROGRAMS\${APP_NAME}\${APP_NAME}.lnk"
+          RMDir "$SMPROGRAMS\${APP_NAME}"
           Delete "$DESKTOP\${APP_NAME}.lnk"
+          DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}"
         SectionEnd
         "@ | Out-File -FilePath installer.nsi -Encoding utf8
         
-        # Cài đặt NSIS
+        # Install NSIS
         choco install nsis -y
         & "C:\Program Files (x86)\NSIS\makensis.exe" installer.nsi
     
     - name: Build App for macOS
       if: matrix.os == 'macos-latest'
       run: |
-        pyinstaller --name MyApp --windowed --add-data "*.py:." --add-data "controller:controller" --add-data "module:module" --add-data "views:views" --add-data "ui:ui" --add-data "configuration:configuration" --icon "icon.icns" main.py
+        # Build with basic configuration
+        pyinstaller --name ObjectDetection --windowed --add-data "*.py:." --add-data "controller:controller" --add-data "module:module" --add-data "views:views" --add-data "ui:ui" --add-data "configuration:configuration" main.py
         
-        brew install create-dmg
+        # Create DMG installer
+        brew install create-dmg || brew upgrade create-dmg || echo "create-dmg installation failed, trying to continue"
+        
         create-dmg \
-          --volname "MyApp Installer" \
-          --volicon "icon.icns" \
+          --volname "ObjectDetection Installer" \
           --window-pos 200 120 \
           --window-size 800 400 \
           --icon-size 100 \
-          --icon "MyApp.app" 200 190 \
-          --hide-extension "MyApp.app" \
+          --icon "ObjectDetection.app" 200 190 \
+          --hide-extension "ObjectDetection.app" \
           --app-drop-link 600 185 \
-          "MyApp-${{ env.VERSION }}-Installer.dmg" \
-          "dist/MyApp.app"
+          "ObjectDetection-${{ env.VERSION }}-Installer.dmg" \
+          "dist/ObjectDetection.app" || {
+            echo "DMG creation failed, creating ZIP instead"
+            ditto -c -k --keepParent "dist/ObjectDetection.app" "ObjectDetection-${{ env.VERSION }}-Installer.zip"
+          }
     
     - name: Build App for Linux
       if: matrix.os == 'ubuntu-latest'
       run: |
-        pyinstaller --name MyApp --add-data "*.py:." --add-data "controller:controller" --add-data "module:module" --add-data "views:views" --add-data "ui:ui" --add-data "configuration:configuration" main.py
+        # Build with basic configuration
+        pyinstaller --name ObjectDetection --add-data "*.py:." --add-data "controller:controller" --add-data "module:module" --add-data "views:views" --add-data "ui:ui" --add-data "configuration:configuration" main.py
         
-        mkdir -p deb_dist/usr/local/bin/MyApp
+        # Create DEB package
+        mkdir -p deb_dist/DEBIAN
+        mkdir -p deb_dist/usr/local/bin/ObjectDetection
         mkdir -p deb_dist/usr/share/applications
-        cp -r dist/MyApp/* deb_dist/usr/local/bin/MyApp/
+        
+        cp -r dist/ObjectDetection/* deb_dist/usr/local/bin/ObjectDetection/
         
         cat > deb_dist/DEBIAN/control << EOF
-        Package: myapp
+        Package: objectdetection
         Version: ${{ env.VERSION }}
+        Section: utils
+        Priority: optional
         Architecture: amd64
-        Maintainer: Your Name <your.email@example.com>
+        Maintainer: Nguyen Quang Vinh <contact.nguyenquangvinh@gmail.com>
         Description: Object Detection Application
+         A cross-platform application for object detection.
         EOF
         
-        cat > deb_dist/usr/share/applications/myapp.desktop << EOF
+        cat > deb_dist/usr/share/applications/objectdetection.desktop << EOF
         [Desktop Entry]
-        Name=MyApp
-        Exec=/usr/local/bin/MyApp/MyApp
+        Name=ObjectDetection
+        Comment=Object Detection Application
+        Exec=/usr/local/bin/ObjectDetection/ObjectDetection
         Type=Application
+        Categories=Graphics;Science;
         EOF
         
-        dpkg-deb --build deb_dist MyApp-${{ env.VERSION }}-Installer.deb
+        # Make the app executable
+        chmod +x deb_dist/usr/local/bin/ObjectDetection/ObjectDetection
+        
+        # Build the DEB package
+        dpkg-deb --build deb_dist ObjectDetection-${{ env.VERSION }}-Installer.deb
+        
+        # Create tarball as additional option
+        tar -czvf ObjectDetection-${{ env.VERSION }}-Linux.tar.gz -C dist ObjectDetection
     
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: MyApp-${{ env.VERSION }}-${{ matrix.os }}-Installer
+        name: ObjectDetection-${{ env.VERSION }}-${{ matrix.os }}-Installer
         path: |
-          MyApp-${{ env.VERSION }}-Setup.exe
-          MyApp-${{ env.VERSION }}-Installer.dmg
-          MyApp-${{ env.VERSION }}-Installer.deb
+          ObjectDetection-${{ env.VERSION }}-Setup.exe
+          ObjectDetection-${{ env.VERSION }}-Installer.dmg
+          ObjectDetection-${{ env.VERSION }}-Installer.zip
+          ObjectDetection-${{ env.VERSION }}-Installer.deb
+          ObjectDetection-${{ env.VERSION }}-Linux.tar.gz
         retention-days: 5
+      continue-on-error: true
 
   release:
     name: Create GitHub Release
@@ -164,5 +227,5 @@ jobs:
       uses: softprops/action-gh-release@v1
       if: startsWith(github.ref, 'refs/tags/')
       with:
-        files: artifacts/**/*.{exe,dmg,deb}
+        files: artifacts/**/*.{exe,dmg,zip,deb,tar.gz}
         generate_release_notes: true
