@@ -1,8 +1,9 @@
-name: Build Object Detection App
+name: Build Object Detection App with Installer
 on:
   push:
     tags:
       - 'v*'  # Chạy khi có tag mới (ví dụ: v1.0.0)
+  workflow_dispatch:  # Cho phép kích hoạt thủ công
 jobs:
   build:
     name: Build on ${{ matrix.os }}
@@ -32,6 +33,12 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install pyinstaller==5.13.2  # Chỉ định phiên bản ổn định
+    # Cài đặt công cụ cho installer
+    - name: Install NSIS (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        choco install nsis -y
+        echo "NSIS_HOME=C:\Program Files (x86)\NSIS" >> $env:GITHUB_ENV
     # Debug dependencies
     - name: List installed packages
       run: pip list
@@ -44,15 +51,140 @@ jobs:
       if: matrix.os == 'windows-latest'
       run: |
         pyinstaller --name MyApp --windowed --add-data "*.py;." main.py
+        
+        # Tạo tệp cấu hình NSIS
+        @"
+        !include "MUI2.nsh"
+        !define APP_NAME "Object Detection App"
+        !define COMP_NAME "Your Company"
+        !define VERSION "${{ env.VERSION }}"
+        !define COPYRIGHT "Copyright (c) 2025"
+        !define DESCRIPTION "Object Detection Application"
+        !define INSTALLER_NAME "MyApp-${{ env.VERSION }}-Setup.exe"
+        !define MAIN_APP_EXE "MyApp.exe"
+        !define INSTALL_TYPE "SetShellVarContext current"
+        !define MUI_ICON "icon.ico"
+        !define MUI_UNICON "icon.ico"
+        !define REG_ROOT "HKCU"
+        !define REG_APP_PATH "Software\Microsoft\Windows\CurrentVersion\App Paths\${MAIN_APP_EXE}"
+        !define UNINSTALL_PATH "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}"
+
+        !insertmacro MUI_PAGE_WELCOME
+        !insertmacro MUI_PAGE_DIRECTORY
+        !insertmacro MUI_PAGE_INSTFILES
+        !insertmacro MUI_PAGE_FINISH
+        !insertmacro MUI_UNPAGE_CONFIRM
+        !insertmacro MUI_UNPAGE_INSTFILES
+        !insertmacro MUI_LANGUAGE "English"
+
+        Name "${APP_NAME}"
+        OutFile "${INSTALLER_NAME}"
+        InstallDir "$PROGRAMFILES\${APP_NAME}"
+        ShowInstDetails show
+
+        Section -MainProgram
+            ${INSTALL_TYPE}
+            SetOverwrite ifnewer
+            SetOutPath "$INSTDIR"
+            File /r "dist\MyApp\*.*"
+            CreateDirectory "$SMPROGRAMS\${APP_NAME}"
+            CreateShortCut "$SMPROGRAMS\${APP_NAME}\${APP_NAME}.lnk" "$INSTDIR\${MAIN_APP_EXE}"
+            CreateShortCut "$DESKTOP\${APP_NAME}.lnk" "$INSTDIR\${MAIN_APP_EXE}"
+        SectionEnd
+
+        Section -Icons_Reg
+            WriteUninstaller "$INSTDIR\uninstall.exe"
+            WriteRegStr ${REG_ROOT} "${REG_APP_PATH}" "" "$INSTDIR\${MAIN_APP_EXE}"
+            WriteRegStr ${REG_ROOT} "${UNINSTALL_PATH}" "DisplayName" "${APP_NAME}"
+            WriteRegStr ${REG_ROOT} "${UNINSTALL_PATH}" "UninstallString" "$INSTDIR\uninstall.exe"
+            WriteRegStr ${REG_ROOT} "${UNINSTALL_PATH}" "DisplayIcon" "$INSTDIR\${MAIN_APP_EXE}"
+            WriteRegStr ${REG_ROOT} "${UNINSTALL_PATH}" "DisplayVersion" "${VERSION}"
+            WriteRegStr ${REG_ROOT} "${UNINSTALL_PATH}" "Publisher" "${COMP_NAME}"
+        SectionEnd
+
+        Section Uninstall
+            ${INSTALL_TYPE}
+            RMDir /r "$INSTDIR"
+            Delete "$SMPROGRAMS\${APP_NAME}\${APP_NAME}.lnk"
+            RMDir "$SMPROGRAMS\${APP_NAME}"
+            Delete "$DESKTOP\${APP_NAME}.lnk"
+            DeleteRegKey ${REG_ROOT} "${REG_APP_PATH}"
+            DeleteRegKey ${REG_ROOT} "${UNINSTALL_PATH}"
+        SectionEnd
+        "@ | Out-File -FilePath installer.nsi -Encoding utf8
+        
+        # Tạo icon mặc định nếu không có
+        if (-not(Test-Path -Path "icon.ico")) {
+          Invoke-WebRequest -Uri "https://www.google.com/favicon.ico" -OutFile "icon.ico"
+        }
+        
+        # Tạo installer
+        & "C:\Program Files (x86)\NSIS\makensis.exe" installer.nsi
       
     - name: Build App for MacOS
       if: matrix.os == 'macos-latest'
       run: |
+        # Build app package thay vì chỉ executable
         pyinstaller --name MyApp --windowed --add-data "*.py:." main.py
+        
+        # Tạo DMG (disk image) để cài đặt
+        brew install create-dmg
+        create-dmg \
+          --volname "MyApp Installer" \
+          --volicon "main.py" \
+          --window-pos 200 120 \
+          --window-size 800 400 \
+          --icon-size 100 \
+          --icon "MyApp.app" 200 190 \
+          --hide-extension "MyApp.app" \
+          --app-drop-link 600 185 \
+          "MyApp-${{ env.VERSION }}-Installer.dmg" \
+          "dist/MyApp.app"
+    
     - name: Build App for Linux
       if: matrix.os == 'ubuntu-latest'
       run: |
         pyinstaller --name MyApp --add-data "*.py:." main.py
+        
+        # Tạo .deb package
+        mkdir -p deb_dist/DEBIAN
+        mkdir -p deb_dist/usr/local/bin/MyApp
+        mkdir -p deb_dist/usr/share/applications
+        mkdir -p deb_dist/usr/share/icons/hicolor/scalable/apps
+        
+        # Copy files
+        cp -r dist/MyApp/* deb_dist/usr/local/bin/MyApp/
+        
+        # Create control file
+        cat > deb_dist/DEBIAN/control << EOF
+        Package: myapp
+        Version: ${VERSION}
+        Section: utils
+        Priority: optional
+        Architecture: amd64
+        Maintainer: Your Name <your.email@example.com>
+        Description: Object Detection Application
+         An application for object detection using computer vision.
+        EOF
+        
+        # Create desktop file
+        cat > deb_dist/usr/share/applications/myapp.desktop << EOF
+        [Desktop Entry]
+        Name=Object Detection App
+        Comment=Detect objects in images
+        Exec=/usr/local/bin/MyApp/MyApp
+        Icon=myapp
+        Terminal=false
+        Type=Application
+        Categories=Utility;
+        EOF
+        
+        # Create dummy icon
+        echo '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48"><circle cx="24" cy="24" r="20" fill="blue"/></svg>' > deb_dist/usr/share/icons/hicolor/scalable/apps/myapp.svg
+        
+        # Build deb package
+        dpkg-deb --build deb_dist MyApp-${{ env.VERSION }}-Installer.deb
+    
     - name: Get Version
       id: get_version
       shell: bash
@@ -62,26 +194,36 @@ jobs:
         else
           echo "VERSION=dev-build" >> $GITHUB_ENV
         fi
-    - name: List dist directory
+    
+    - name: List build directory
       shell: bash
       run: |
-        ls -la dist/
-    - name: Create ZIP (Windows)
+        ls -la
+    
+    - name: Upload Windows Installer
       if: matrix.os == 'windows-latest'
-      run: |
-        cd dist
-        powershell Compress-Archive -Path MyApp -DestinationPath ../MyApp-${{ env.VERSION }}-${{ runner.os }}.zip -Force
-    - name: Create ZIP (Unix)
-      if: matrix.os != 'windows-latest'
-      run: |
-        cd dist
-        zip -r ../MyApp-${{ env.VERSION }}-${{ runner.os }}.zip MyApp
-    - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: MyApp-${{ env.VERSION }}-${{ runner.os }}
-        path: MyApp-${{ env.VERSION }}-${{ runner.os }}.zip
+        name: MyApp-${{ env.VERSION }}-Windows-Installer
+        path: MyApp-${{ env.VERSION }}-Setup.exe
         retention-days: 5
+    
+    - name: Upload MacOS Installer
+      if: matrix.os == 'macos-latest'
+      uses: actions/upload-artifact@v4
+      with:
+        name: MyApp-${{ env.VERSION }}-MacOS-Installer
+        path: MyApp-${{ env.VERSION }}-Installer.dmg
+        retention-days: 5
+    
+    - name: Upload Linux Installer
+      if: matrix.os == 'ubuntu-latest'
+      uses: actions/upload-artifact@v4
+      with:
+        name: MyApp-${{ env.VERSION }}-Linux-Installer
+        path: MyApp-${{ env.VERSION }}-Installer.deb
+        retention-days: 5
+  
   release:
     name: Create GitHub Release
     needs: build
@@ -93,12 +235,14 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         path: artifacts/
+    
     - name: Display structure of downloaded files
       run: ls -R
       working-directory: artifacts/
+    
     - name: Publish Release
       uses: softprops/action-gh-release@v1
       if: startsWith(github.ref, 'refs/tags/')
       with:
-        files: artifacts/**/*.zip
+        files: artifacts/**/*
         generate_release_notes: true
