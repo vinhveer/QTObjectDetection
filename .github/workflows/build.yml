@@ -36,10 +36,10 @@ jobs:
           echo "VERSION=dev-build" >> $GITHUB_ENV
         fi
     
-    - name: Setup Python
+    - name: Setup Python 3.12
       uses: actions/setup-python@v4
       with:
-        python-version: '3.9'
+        python-version: '3.12'
         cache: 'pip'
     
     - name: Install dependencies
@@ -97,7 +97,7 @@ jobs:
     - name: Build App for MacOS
       if: matrix.os == 'macos-latest'
       run: |
-        pyinstaller --name MyApp --windowed --add-data "*.py:." --add-data "controller/*:controller" --add-data "module/*:module" --add-data "views/*;views" --add-data "ui/*:ui" --add-data "configuration/*:configuration" --icon "icon.icns" main.py
+        pyinstaller --name MyApp --windowed --add-data "*.py:." --add-data "controller/*:controller" --add-data "module/*:module" --add-data "views/*:views" --add-data "ui/*:ui" --add-data "configuration/*:configuration" --icon "icon.icns" main.py
         
         brew install create-dmg
         create-dmg \
