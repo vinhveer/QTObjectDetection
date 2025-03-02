@@ -12,41 +12,30 @@ jobs:
       fail-fast: false  # Tiếp tục xây dựng các OS khác ngay cả khi một OS thất bại
       matrix:
         os: [macos-latest, windows-latest]
-        include:
-          - os: windows-latest
-            exe_ext: .exe
-          - os: macos-latest
-            exe_ext: ''
     steps:
     - name: Checkout source code
       uses: actions/checkout@v4
+    
     - name: Setup Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.9'
         cache: 'pip'
+    
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install pyinstaller==5.13.2  # Chỉ định phiên bản ổn định
-    # Debug dependencies
+    
     - name: List installed packages
       run: pip list
-    # Debug file structure
+    
     - name: List project structure
       shell: bash
       run: |
         find . -type f | grep -v "__pycache__" | sort
-    - name: Build App for Windows
-      if: matrix.os == 'windows-latest'
-      run: |
-        pyinstaller --onefile --name MyApp main.py
-      
-    - name: Build App for MacOS
-      if: matrix.os == 'macos-latest'
-      run: |
-        pyinstaller --onefile --name MyApp main.py
+    
     - name: Get Version
       id: get_version
       shell: bash
@@ -56,16 +45,134 @@ jobs:
         else
           echo "VERSION=dev-build" >> $GITHUB_ENV
         fi
-    - name: List dist directory
-      shell: bash
+    
+    # Windows-specific steps
+    - name: Build Windows App with PyInstaller
+      if: matrix.os == 'windows-latest'
       run: |
-        ls -la dist/
-    - name: Upload Artifact
+        pyinstaller --onedir --name MyApp main.py
+    
+    - name: Install MSIX Tools
+      if: matrix.os == 'windows-latest'
+      run: |
+        # Install Microsoft.Windows.SDK.BuildTools
+        choco install microsoft-windows-sdk-buildtoolsnetfx4 -y
+        
+        # Install Windows App Certification Kit
+        choco install windows-adk-all -y
+    
+    - name: Create Windows MSIX Bundle
+      if: matrix.os == 'windows-latest'
+      run: |
+        # Create AppxManifest.xml file
+        echo "<?xml version='1.0' encoding='utf-8'?>
+        <Package
+          xmlns='http://schemas.microsoft.com/appx/manifest/foundation/windows10'
+          xmlns:uap='http://schemas.microsoft.com/appx/manifest/uap/windows10'
+          xmlns:rescap='http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities'>
+          <Identity Name='ObjectDetectionApp' 
+                   Publisher='CN=YourCompany, O=YourOrganization, C=US' 
+                   Version='${{ env.VERSION }}' />
+          <Properties>
+            <DisplayName>Object Detection App</DisplayName>
+            <PublisherDisplayName>Your Company</PublisherDisplayName>
+            <Logo>assets\\logo.png</Logo>
+          </Properties>
+          <Dependencies>
+            <TargetDeviceFamily Name='Windows.Desktop' MinVersion='10.0.14393.0' MaxVersionTested='10.0.19041.0' />
+          </Dependencies>
+          <Resources>
+            <Resource Language='en-us' />
+          </Resources>
+          <Applications>
+            <Application Id='ObjectDetectionApp' Executable='MyApp\\MyApp.exe' EntryPoint='Windows.FullTrustApplication'>
+              <uap:VisualElements
+                DisplayName='Object Detection App'
+                Description='App for object detection'
+                BackgroundColor='transparent'
+                Square150x150Logo='assets\\logo.png'
+                Square44x44Logo='assets\\logo.png' />
+            </Application>
+          </Applications>
+          <Capabilities>
+            <rescap:Capability Name='runFullTrust' />
+          </Capabilities>
+        </Package>" > AppxManifest.xml
+        
+        # Create assets folder and a placeholder logo
+        mkdir -p assets
+        echo "<svg xmlns='http://www.w3.org/2000/svg' width='44' height='44'><rect width='44' height='44' fill='blue'/></svg>" > assets/logo.png
+        
+        # Create the MSIX package
+        "$env:ProgramFiles(x86)\\Windows Kits\\10\\bin\\10.0.19041.0\\x64\\MakeAppx.exe" pack /d dist /p MyApp-${{ env.VERSION }}-Windows.msix /m AppxManifest.xml
+        
+        # Create a self-signed certificate
+        New-SelfSignedCertificate -Type Custom -Subject "CN=YourCompany" -KeyUsage DigitalSignature -FriendlyName "YourCompany Certificate" -CertStoreLocation "Cert:\CurrentUser\My" -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.3", "2.5.29.19={text}")
+        
+        # Export the certificate
+        $cert = (Get-ChildItem Cert:\CurrentUser\My | Where-Object {$_.FriendlyName -eq "YourCompany Certificate"})
+        Export-PfxCertificate -Cert $cert -FilePath YourCompany.pfx -Password (ConvertTo-SecureString -String "password" -Force -AsPlainText)
+        
+        # Sign the MSIX package
+        "$env:ProgramFiles(x86)\\Windows Kits\\10\\bin\\10.0.19041.0\\x64\\SignTool.exe" sign /fd SHA256 /a /f YourCompany.pfx /p password MyApp-${{ env.VERSION }}-Windows.msix
+        
+        # Create the MSIX bundle
+        "$env:ProgramFiles(x86)\\Windows Kits\\10\\bin\\10.0.19041.0\\x64\\MakeAppx.exe" bundle /d . /p MyApp-${{ env.VERSION }}-Windows.msixbundle /bf PackageFiles.txt
+        echo "MyApp-${{ env.VERSION }}-Windows.msix" > PackageFiles.txt
+        
+        # Sign the MSIX bundle
+        "$env:ProgramFiles(x86)\\Windows Kits\\10\\bin\\10.0.19041.0\\x64\\SignTool.exe" sign /fd SHA256 /a /f YourCompany.pfx /p password MyApp-${{ env.VERSION }}-Windows.msixbundle
+    
+    # macOS-specific steps
+    - name: Build macOS App with PyInstaller
+      if: matrix.os == 'macos-latest'
+      run: |
+        pyinstaller --windowed --name MyApp main.py
+    
+    - name: Install create-dmg
+      if: matrix.os == 'macos-latest'
+      run: |
+        brew install create-dmg
+    
+    - name: Create macOS DMG Package
+      if: matrix.os == 'macos-latest'
+      run: |
+        # Create an application bundle structure
+        mkdir -p dmg_build
+        cp -r "dist/MyApp.app" dmg_build/
+        
+        # Create the DMG file
+        create-dmg \
+          --volname "MyApp ${{ env.VERSION }}" \
+          --volicon "dist/MyApp.app/Contents/Resources/icon-windowed.icns" \
+          --window-pos 200 120 \
+          --window-size 800 400 \
+          --icon-size 100 \
+          --icon "MyApp.app" 200 190 \
+          --hide-extension "MyApp.app" \
+          --app-drop-link 600 185 \
+          "MyApp-${{ env.VERSION }}-macOS.dmg" \
+          "dmg_build/" || true
+        
+        # Verify the DMG was created
+        ls -la "MyApp-${{ env.VERSION }}-macOS.dmg" || echo "DMG creation failed"
+    
+    - name: Upload Windows Installer
+      if: matrix.os == 'windows-latest'
       uses: actions/upload-artifact@v4
       with:
-        name: MyApp-${{ env.VERSION }}-${{ runner.os }}
-        path: dist/MyApp${{ matrix.exe_ext }}
+        name: MyApp-${{ env.VERSION }}-Windows-Installer
+        path: MyApp-${{ env.VERSION }}-Windows.msixbundle
         retention-days: 5
+    
+    - name: Upload macOS Installer
+      if: matrix.os == 'macos-latest'
+      uses: actions/upload-artifact@v4
+      with:
+        name: MyApp-${{ env.VERSION }}-macOS-Installer
+        path: MyApp-${{ env.VERSION }}-macOS.dmg
+        retention-days: 5
+  
   release:
     name: Create GitHub Release
     needs: build
@@ -77,9 +184,11 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         path: artifacts/
+    
     - name: Display structure of downloaded files
       run: ls -R
       working-directory: artifacts/
+    
     - name: Publish Release
       uses: softprops/action-gh-release@v1
       if: startsWith(github.ref, 'refs/tags/')
