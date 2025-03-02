@@ -1,10 +1,8 @@
 name: Build Object Detection App
-
 on:
   push:
     tags:
       - 'v*'  # Chạy khi có tag mới (ví dụ: v1.0.0)
-
 jobs:
   build:
     name: Build on ${{ matrix.os }}
@@ -13,41 +11,33 @@ jobs:
     strategy:
       fail-fast: false  # Tiếp tục xây dựng các OS khác ngay cả khi một OS thất bại
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [macos-latest, windows-latest]
         include:
           - os: windows-latest
             exe_ext: .exe
-          - os: ubuntu-latest
-            exe_ext: ''
           - os: macos-latest
             exe_ext: ''
-
     steps:
     - name: Checkout source code
       uses: actions/checkout@v4
-
     - name: Setup Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.9'
         cache: 'pip'
-
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install pyinstaller==5.13.2  # Chỉ định phiên bản ổn định
-
     # Debug dependencies
     - name: List installed packages
       run: pip list
-
     # Debug file structure
     - name: List project structure
       shell: bash
       run: |
         find . -type f | grep -v "__pycache__" | sort
-
     - name: Build App for Windows
       if: matrix.os == 'windows-latest'
       run: |
@@ -57,12 +47,6 @@ jobs:
       if: matrix.os == 'macos-latest'
       run: |
         pyinstaller --onefile --name MyApp main.py
-
-    - name: Build App for Linux
-      if: matrix.os == 'ubuntu-latest'
-      run: |
-        pyinstaller --onefile --name MyApp main.py
-
     - name: Get Version
       id: get_version
       shell: bash
@@ -72,31 +56,16 @@ jobs:
         else
           echo "VERSION=dev-build" >> $GITHUB_ENV
         fi
-
     - name: List dist directory
       shell: bash
       run: |
         ls -la dist/
-
-    - name: Create ZIP (Windows)
-      if: matrix.os == 'windows-latest'
-      run: |
-        cd dist
-        powershell Compress-Archive -Path MyApp.exe -DestinationPath ../MyApp-${{ env.VERSION }}-${{ runner.os }}.zip
-
-    - name: Create ZIP (Unix)
-      if: matrix.os != 'windows-latest'
-      run: |
-        cd dist
-        zip ../MyApp-${{ env.VERSION }}-${{ runner.os }}.zip MyApp${{ matrix.exe_ext }}
-
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
         name: MyApp-${{ env.VERSION }}-${{ runner.os }}
-        path: MyApp-${{ env.VERSION }}-${{ runner.os }}.zip
+        path: dist/MyApp${{ matrix.exe_ext }}
         retention-days: 5
-
   release:
     name: Create GitHub Release
     needs: build
@@ -108,14 +77,12 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         path: artifacts/
-
     - name: Display structure of downloaded files
       run: ls -R
       working-directory: artifacts/
-
     - name: Publish Release
       uses: softprops/action-gh-release@v1
       if: startsWith(github.ref, 'refs/tags/')
       with:
-        files: artifacts/**/*.zip
+        files: artifacts/**/*
         generate_release_notes: true
