@@ -20,6 +20,9 @@ jobs:
             exe_ext: .exe
           - os: macos-latest
             exe_ext: ''
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+      raw_version: ${{ steps.get_version.outputs.raw_version }}
     steps:
     - name: Checkout source code
       uses: actions/checkout@v4
@@ -29,15 +32,15 @@ jobs:
       shell: bash
       run: |
         if [[ "$GITHUB_REF" == refs/tags/* ]]; then
-          echo "RAW_VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+          echo "raw_version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
           CLEAN_VERSION=${GITHUB_REF#refs/tags/v}
-          echo "VERSION=${CLEAN_VERSION}" >> $GITHUB_ENV
+          echo "version=${CLEAN_VERSION}" >> $GITHUB_OUTPUT
         elif [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
-          echo "RAW_VERSION=manual-$(date +%Y%m%d-%H%M%S)" >> $GITHUB_ENV
-          echo "VERSION=0.0.1.$(date +%Y%m%d%H%M%S)" >> $GITHUB_ENV
+          echo "raw_version=manual-$(date +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
+          echo "version=0.0.1.$(date +%Y%m%d%H%M%S)" >> $GITHUB_OUTPUT
         else
-          echo "RAW_VERSION=dev-build" >> $GITHUB_ENV
-          echo "VERSION=0.0.1.$(date +%Y%m%d%H%M%S)" >> $GITHUB_ENV
+          echo "raw_version=dev-build" >> $GITHUB_OUTPUT
+          echo "version=0.0.1.$(date +%Y%m%d%H%M%S)" >> $GITHUB_OUTPUT
         fi
     
     - name: Setup Python
@@ -91,8 +94,8 @@ jobs:
         cat << EOF > installer.nsi
         !include "MUI2.nsh"
         !define APP_NAME "ObjectDetection"
-        !define VERSION "$RAW_VERSION"
-        !define INSTALLER_NAME "ObjectDetection-$RAW_VERSION-Setup.exe"
+        !define VERSION "${{ steps.get_version.outputs.raw_version }}"
+        !define INSTALLER_NAME "ObjectDetection-${{ steps.get_version.outputs.raw_version }}-Setup.exe"
         !define MAIN_APP_EXE "ObjectDetection.exe"
         
         !insertmacro MUI_PAGE_WELCOME
@@ -152,21 +155,27 @@ jobs:
           --icon "ObjectDetection.app" 200 190 \
           --hide-extension "ObjectDetection.app" \
           --app-drop-link 600 185 \
-          "ObjectDetection-${{ env.RAW_VERSION }}-Installer.dmg" \
+          "ObjectDetection-${{ steps.get_version.outputs.raw_version }}-Installer.dmg" \
           "dist/ObjectDetection.app" || {
             echo "DMG creation failed, creating ZIP instead"
-            ditto -c -k --keepParent "dist/ObjectDetection.app" "ObjectDetection-${{ env.RAW_VERSION }}-Installer.zip"
+            ditto -c -k --keepParent "dist/ObjectDetection.app" "ObjectDetection-${{ steps.get_version.outputs.raw_version }}-Installer.zip"
           }
     
-    - name: Upload Artifacts
+    - name: Upload Windows Installer
+      if: matrix.os == 'windows-latest'
       uses: actions/upload-artifact@v4
       with:
-        name: ObjectDetection-${{ env.RAW_VERSION }}-${{ matrix.os }}-Installer
+        name: windows-installer
+        path: ObjectDetection-*-Setup.exe
+        
+    - name: Upload macOS Installer
+      if: matrix.os == 'macos-latest'
+      uses: actions/upload-artifact@v4
+      with:
+        name: macos-installer
         path: |
-          dist/ObjectDetection-*.exe
-          dist/ObjectDetection-*.dmg
-          dist/ObjectDetection-*.zip
-      continue-on-error: true
+          ObjectDetection-*-Installer.dmg
+          ObjectDetection-*-Installer.zip
 
   release:
     name: Create GitHub Release
@@ -174,19 +183,28 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    if: startsWith(github.ref, 'refs/tags/')
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Download Artifacts
+    - name: Download Windows Installer
       uses: actions/download-artifact@v4
       with:
-        name: ObjectDetection-${{ env.RAW_VERSION }}-${{ matrix.os }}-Installer
-        path: artifacts/
+        name: windows-installer
+        path: artifacts/windows
+        
+    - name: Download macOS Installer
+      uses: actions/download-artifact@v4
+      with:
+        name: macos-installer
+        path: artifacts/macos
+    
+    - name: List artifacts
+      run: |
+        ls -R artifacts/
     
     - name: Publish Release
       uses: softprops/action-gh-release@v1
-      if: startsWith(github.ref, 'refs/tags/')
       with:
-        files: artifacts/**/*.{exe,dmg,zip}
+        files: |
+          artifacts/windows/*
+          artifacts/macos/*
         generate_release_notes: true
