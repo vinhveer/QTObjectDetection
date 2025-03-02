@@ -1,5 +1,6 @@
 import json
 import os
+import sys
 from pathlib import Path
 from PySide6.QtWidgets import QFileDialog, QMessageBox
 
@@ -10,7 +11,17 @@ class Settings:
 
     def __init__(self, ui):
         self.ui = ui
-        self.config_path = "configuration/.config"
+        
+        # Xác định đường dẫn cơ sở
+        if getattr(sys, 'frozen', False):
+            # Đang chạy từ ứng dụng đóng gói (PyInstaller)
+            base_path = sys._MEIPASS
+        else:
+            # Đang chạy từ mã nguồn
+            base_path = os.path.dirname(os.path.abspath(__file__))
+        
+        # Đường dẫn đến file .config
+        self.config_path = os.path.join(base_path, 'configuration', '.config')
         self.config_data = {}
         self.last_export_path = None
         
@@ -27,8 +38,9 @@ class Settings:
             "save_prompt_type": self.SAVE_TO_CONFIGURED_PATH,
         }
         
-        # Create configuration directory if it doesn't exist
-        os.makedirs(os.path.dirname(self.config_path), exist_ok=True)
+        # Tạo thư mục configuration nếu không tồn tại (chỉ khi chạy từ mã nguồn)
+        if not getattr(sys, 'frozen', False):
+            os.makedirs(os.path.dirname(self.config_path), exist_ok=True)
         
         self.load_config()
         self.init_ui()
@@ -37,6 +49,11 @@ class Settings:
     def save_config(self):
         """Lưu cấu hình vào tệp"""
         try:
+            # Chỉ lưu khi chạy từ mã nguồn, không lưu khi chạy từ ứng dụng đóng gói
+            if getattr(sys, 'frozen', False):
+                print("Đang chạy từ ứng dụng đóng gói, không lưu cấu hình.")
+                return
+            
             # Đảm bảo thư mục tồn tại
             os.makedirs(os.path.dirname(self.config_path), exist_ok=True)
             
@@ -66,8 +83,8 @@ class Settings:
                 config_changed = True
                 print(f"Đã cập nhật đường dẫn mặc định thành: {self.default_downloads_path}")
         
-        # Lưu lại nếu có thay đổi
-        if config_changed:
+        # Lưu lại nếu có thay đổi (chỉ khi chạy từ mã nguồn)
+        if config_changed and not getattr(sys, 'frozen', False):
             self.save_config()
 
     def load_config(self):
@@ -88,7 +105,8 @@ class Settings:
                 self.save_path = self.default_downloads_path
                 self.save_prompt_type = self.SAVE_TO_CONFIGURED_PATH
                 self.config_data = self.default_config.copy()
-                self.save_config()
+                if not getattr(sys, 'frozen', False):
+                    self.save_config()
             
             # Update UI
             self.ui.pathSaveShot.setText(self.save_path)
@@ -99,7 +117,8 @@ class Settings:
             self.save_path = self.default_downloads_path
             self.save_prompt_type = self.SAVE_TO_CONFIGURED_PATH
             self.config_data = self.default_config.copy()
-            self.save_config()
+            if not getattr(sys, 'frozen', False):
+                self.save_config()
 
     def init_ui(self):
         """Khởi tạo UI với dữ liệu từ cấu hình"""

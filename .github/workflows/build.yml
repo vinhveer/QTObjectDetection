@@ -8,9 +8,9 @@ jobs:
   build:
     name: Build on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 60  # Tăng thời gian chờ tối đa
+    timeout-minutes: 60
     strategy:
-      fail-fast: false  # Tiếp tục xây dựng các OS khác nếu một OS thất bại
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         include:
@@ -36,7 +36,7 @@ jobs:
           echo "VERSION=dev-build" >> $GITHUB_ENV
         fi
     
-    - name: Setup Python 3.12
+    - name: Setup Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.12'
@@ -51,7 +51,7 @@ jobs:
     - name: Build App for Windows
       if: matrix.os == 'windows-latest'
       run: |
-        pyinstaller --name MyApp --windowed --add-data "*.py;." --add-data "controller/*;controller" --add-data "module/*;module" --add-data "views/*;views" --add-data "ui/*;ui" --add-data "configuration/*;configuration" --icon "icon.ico" main.py
+        pyinstaller --name MyApp --windowed --add-data "*.py;." --add-data "controller;controller" --add-data "module;module" --add-data "views;views" --add-data "ui;ui" --add-data "configuration;configuration" --icon "icon.ico" main.py
         
         # Tạo tệp cấu hình NSIS
         @"
@@ -90,14 +90,14 @@ jobs:
         SectionEnd
         "@ | Out-File -FilePath installer.nsi -Encoding utf8
         
-        # Cài đặt NSIS nếu chưa có
+        # Cài đặt NSIS
         choco install nsis -y
         & "C:\Program Files (x86)\NSIS\makensis.exe" installer.nsi
     
-    - name: Build App for MacOS
+    - name: Build App for macOS
       if: matrix.os == 'macos-latest'
       run: |
-        pyinstaller --name MyApp --windowed --add-data "*.py:." --add-data "controller/*:controller" --add-data "module/*:module" --add-data "views/*:views" --add-data "ui/*:ui" --add-data "configuration/*:configuration" --icon "icon.icns" main.py
+        pyinstaller --name MyApp --windowed --add-data "*.py:." --add-data "controller:controller" --add-data "module:module" --add-data "views:views" --add-data "ui:ui" --add-data "configuration:configuration" --icon "icon.icns" main.py
         
         brew install create-dmg
         create-dmg \
@@ -115,7 +115,7 @@ jobs:
     - name: Build App for Linux
       if: matrix.os == 'ubuntu-latest'
       run: |
-        pyinstaller --name MyApp --add-data "*.py:." --add-data "controller/*:controller" --add-data "module/*:module" --add-data "views/*:views" --add-data "ui/*:ui" --add-data "configuration/*:configuration" main.py
+        pyinstaller --name MyApp --add-data "*.py:." --add-data "controller:controller" --add-data "module:module" --add-data "views:views" --add-data "ui:ui" --add-data "configuration:configuration" main.py
         
         mkdir -p deb_dist/usr/local/bin/MyApp
         mkdir -p deb_dist/usr/share/applications
