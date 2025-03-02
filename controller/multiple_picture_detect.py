@@ -1,5 +1,4 @@
 from PySide6.QtCore import QObject, Signal, Qt
-from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QMessageBox, QFileDialog, QPushButton, QListWidgetItem, QApplication
 import os
 import cv2

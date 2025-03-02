@@ -1,4 +1,5 @@
-from PySide6.QtWidgets import *
+import sys
+from PySide6.QtWidgets import QApplication, QMainWindow, QFileDialog, QMessageBox
 
 from views.ui import Ui_mainWindow
 from controller.camera_detect import CameraDetector
@@ -7,7 +8,6 @@ from controller.multiple_picture_detect import MultiplePictureDetector
 from controller.settings import Settings
 from module.model import model_instance
 
-import sys
 
 class MainWindow(QMainWindow):
     def __init__(self):
