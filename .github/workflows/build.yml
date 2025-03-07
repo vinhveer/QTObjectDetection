@@ -3,8 +3,8 @@ name: Build Object Detection App with Installer
 on:
   push:
     tags:
-      - 'v*'  # Run when a new tag is pushed (e.g., v1.0.0)
-  workflow_dispatch:  # Allow manual triggering
+      - 'v*'  # Chạy khi đẩy tag mới (ví dụ: v1.1)
+  workflow_dispatch:  # Cho phép chạy thủ công
 
 jobs:
   build:
@@ -26,38 +26,36 @@ jobs:
     steps:
     - name: Checkout source code
       uses: actions/checkout@v4
-
+    
     - name: Get Version
       id: get_version
       shell: bash
       run: |
-        # Set author name
-        echo "author=Nguyen Quang Vinh" >> $GITHUB_OUTPUT
-        
-        # Set version to 1.1
-        echo "version=1.1" >> $GITHUB_OUTPUT
-        
         if [[ "$GITHUB_REF" == refs/tags/* ]]; then
           echo "raw_version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          CLEAN_VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=${CLEAN_VERSION}" >> $GITHUB_OUTPUT
         elif [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
-          echo "raw_version=v1.1-$(date +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
+          echo "raw_version=manual-$(date +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
+          echo "version=0.0.1.$(date +%Y%m%d%H%M%S)" >> $GITHUB_OUTPUT
         else
-          echo "raw_version=v1.1-dev" >> $GITHUB_OUTPUT
+          echo "raw_version=dev-build" >> $GITHUB_OUTPUT
+          echo "version=0.0.1.$(date +%Y%m%d%H%M%S)" >> $GITHUB_OUTPUT
         fi
-
+    
     - name: Setup Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.12'
         cache: 'pip'
-
+    
     - name: Install dependencies
       shell: bash
       run: |
         python -m pip install --upgrade pip
         if [ -f requirements.txt ]; then pip install -r requirements.txt; else echo "requirements.txt not found"; fi
         pip install pyinstaller
-
+    
     - name: Generate Default Icons
       shell: bash
       run: |
@@ -84,41 +82,40 @@ jobs:
           convert -size 256x256 xc:black -fill white -gravity center -pointsize 20 -annotate 0 "ObjectDetection" resources/icon.png || echo "Could not create icon.png"
         fi
       continue-on-error: true
-
+    
     - name: Install Windows Code Signing Certificate
       if: matrix.os == 'windows-latest'
       shell: powershell
       run: |
-        # Create a self-signed certificate for code signing
-        # In a production environment, you should use a real certificate from a trusted CA
+        # Tạo chứng chỉ tự ký cho ký mã
+        # Trong môi trường sản xuất, bạn nên dùng chứng chỉ thật từ CA đáng tin cậy
         $cert = New-SelfSignedCertificate -Subject "CN=Nguyen Quang Vinh, O=ObjectDetection" -Type CodeSigningCert -CertStoreLocation "Cert:\CurrentUser\My"
         $certPassword = ConvertTo-SecureString -String "password" -Force -AsPlainText
         $certPath = "codesign.pfx"
         Export-PfxCertificate -Cert "Cert:\CurrentUser\My\$($cert.Thumbprint)" -FilePath $certPath -Password $certPassword
         echo "CERT_PATH=$certPath" >> $env:GITHUB_ENV
         echo "CERT_PASSWORD=password" >> $env:GITHUB_ENV
-
+    
     - name: Build App for Windows
       if: matrix.os == 'windows-latest'
       shell: bash
       run: |
-        # Build with PyInstaller
+        # Build với PyInstaller
         pyinstaller --name ObjectDetection --windowed --icon=resources/icon.ico --add-data "*.py;." --add-data "controller;controller" --add-data "module;module" --add-data "views;views" --add-data "ui;ui" --add-data "configuration;configuration" main.py || exit 1
         
-        # Sign the executable
+        # Ký mã cho tệp thực thi
         powershell -Command "Set-AuthenticodeSignature -FilePath 'dist\ObjectDetection\ObjectDetection.exe' -Certificate (Get-PfxCertificate -FilePath $env:CERT_PATH -Password (ConvertTo-SecureString -String $env:CERT_PASSWORD -Force -AsPlainText)) -TimestampServer 'http://timestamp.digicert.com'"
         
-        # Create NSIS script
+        # Tạo NSIS script với thông tin tác giả và phiên bản
         cat << EOF > installer.nsi
         !include "MUI2.nsh"
         !define APP_NAME "ObjectDetection"
         !define AUTHOR "Nguyen Quang Vinh"
-        !define VERSION "1.1"
-        !define INSTALLER_NAME "ObjectDetection-v1.1-Setup.exe"
+        !define VERSION "${{ steps.get_version.outputs.version }}"
+        !define INSTALLER_NAME "ObjectDetection-${{ steps.get_version.outputs.raw_version }}-Setup.exe"
         !define MAIN_APP_EXE "ObjectDetection.exe"
         
         !insertmacro MUI_PAGE_WELCOME
-        !insertmacro MUI_PAGE_LICENSE "LICENSE.txt"
         !insertmacro MUI_PAGE_DIRECTORY
         !insertmacro MUI_PAGE_INSTFILES
         !insertmacro MUI_PAGE_FINISH
@@ -131,8 +128,8 @@ jobs:
         InstallDir "\$PROGRAMFILES\\\${APP_NAME}"
         ShowInstDetails show
         
-        # Add version info
-        VIProductVersion "1.1.0.0"
+        # Thêm thông tin phiên bản và tác giả
+        VIProductVersion "\${VERSION}.0.0"
         VIAddVersionKey "ProductName" "\${APP_NAME}"
         VIAddVersionKey "CompanyName" "\${AUTHOR}"
         VIAddVersionKey "FileVersion" "\${VERSION}"
@@ -144,13 +141,6 @@ jobs:
           SetOutPath "\$INSTDIR"
           File /r "dist\\ObjectDetection\\*.*"
           
-          # Create license file if it doesn't exist
-          FileOpen \$0 "LICENSE.txt" w
-          FileWrite \$0 "This software is provided by \${AUTHOR}.$\r$\n"
-          FileWrite \$0 "Version \${VERSION}$\r$\n"
-          FileWrite \$0 "Copyright © 2025 All rights reserved."
-          FileClose \$0
-          
           CreateDirectory "\$SMPROGRAMS\\\${APP_NAME}"
           CreateShortCut "\$SMPROGRAMS\\\${APP_NAME}\\\${APP_NAME}.lnk" "\$INSTDIR\\\${MAIN_APP_EXE}"
           CreateShortCut "\$DESKTOP\\\${APP_NAME}.lnk" "\$INSTDIR\\\${MAIN_APP_EXE}"
@@ -158,8 +148,6 @@ jobs:
           WriteUninstaller "\$INSTDIR\\uninstall.exe"
           WriteRegStr HKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\\${APP_NAME}" "DisplayName" "\${APP_NAME}"
           WriteRegStr HKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\\${APP_NAME}" "UninstallString" "\$INSTDIR\\uninstall.exe"
-          WriteRegStr HKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\\${APP_NAME}" "DisplayVersion" "\${VERSION}"
-          WriteRegStr HKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\\${APP_NAME}" "Publisher" "\${AUTHOR}"
         SectionEnd
     
         Section "Uninstall"
@@ -172,70 +160,52 @@ jobs:
         SectionEnd
         EOF
         
-        # Install and run NSIS
+        # Cài đặt và chạy NSIS
         choco install nsis -y --force || exit 1
         "/c/Program Files (x86)/NSIS/makensis.exe" installer.nsi || exit 1
         
-        # Sign the installer
-        powershell -Command "Set-AuthenticodeSignature -FilePath 'ObjectDetection-v1.1-Setup.exe' -Certificate (Get-PfxCertificate -FilePath $env:CERT_PATH -Password (ConvertTo-SecureString -String $env:CERT_PASSWORD -Force -AsPlainText)) -TimestampServer 'http://timestamp.digicert.com'"
-
+        # Ký mã cho trình cài đặt
+        powershell -Command "Set-AuthenticodeSignature -FilePath 'ObjectDetection-${{ steps.get_version.outputs.raw_version }}-Setup.exe' -Certificate (Get-PfxCertificate -FilePath $env:CERT_PATH -Password (ConvertTo-SecureString -String $env:CERT_PASSWORD -Force -AsPlainText)) -TimestampServer 'http://timestamp.digicert.com'"
+    
     - name: Build App for macOS
       if: matrix.os == 'macos-latest'
       shell: bash
       run: |
-        # Build with PyInstaller for both Intel and ARM
-        PYTHONPATH=$PYTHONPATH:./ pyinstaller --name ObjectDetection \
-          --windowed \
-          --icon=resources/icon.icns \
-          --add-data "*.py:." \
-          --add-data "controller:controller" \
-          --add-data "module:module" \
-          --add-data "views:views" \
-          --add-data "ui:ui" \
-          --add-data "configuration:configuration" \
-          --target-architecture universal2 \
-          main.py || exit 1
+        # Build với PyInstaller
+        pyinstaller --name ObjectDetection --windowed --icon=resources/icon.icns --add-data "*.py:." --add-data "controller:controller" --add-data "module:module" --add-data "views:views" --add-data "ui:ui" --add-data "configuration:configuration" main.py || exit 1
         
-        # Add version and author info to Info.plist
+        # Thêm thông tin phiên bản và tác giả vào Info.plist
         PLIST_PATH="dist/ObjectDetection.app/Contents/Info.plist"
-        /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 1.1" "$PLIST_PATH" || true
-        /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.1" "$PLIST_PATH" || true
-        /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string 1.1" "$PLIST_PATH" || true
-        /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 1.1" "$PLIST_PATH" || true
+        /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string ${{ steps.get_version.outputs.version }}" "$PLIST_PATH" || true
+        /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${{ steps.get_version.outputs.version }}" "$PLIST_PATH" || true
+        /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string ${{ steps.get_version.outputs.version }}" "$PLIST_PATH" || true
+        /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ steps.get_version.outputs.version }}" "$PLIST_PATH" || true
         /usr/libexec/PlistBuddy -c "Add :NSHumanReadableCopyright string © 2025 Nguyen Quang Vinh" "$PLIST_PATH" || true
         /usr/libexec/PlistBuddy -c "Set :NSHumanReadableCopyright © 2025 Nguyen Quang Vinh" "$PLIST_PATH" || true
         
-        # Create DMG installer
+        # Tạo DMG installer
         brew install create-dmg || brew upgrade create-dmg || echo "create-dmg installation failed"
         create-dmg \
           --volname "ObjectDetection Installer" \
-          --volicon "resources/icon.icns" \
           --window-pos 200 120 \
           --window-size 800 400 \
           --icon-size 100 \
           --icon "ObjectDetection.app" 200 190 \
           --hide-extension "ObjectDetection.app" \
           --app-drop-link 600 185 \
-          --text-size 14 \
-          --add-file "Read Me.txt" "Read Me.txt" 400 300 \
-          "ObjectDetection-v1.1-Universal-Installer.dmg" \
+          "ObjectDetection-${{ steps.get_version.outputs.raw_version }}-Installer.dmg" \
           "dist/ObjectDetection.app" || {
             echo "DMG creation failed, creating ZIP instead"
-            ditto -c -k --keepParent "dist/ObjectDetection.app" "ObjectDetection-v1.1-Universal-Installer.zip"
+            ditto -c -k --keepParent "dist/ObjectDetection.app" "ObjectDetection-${{ steps.get_version.outputs.raw_version }}-Installer.zip"
           }
-        
-        # Create Read Me file
-        echo "ObjectDetection v1.1" > "Read Me.txt"
-        echo "Developed by Nguyen Quang Vinh" >> "Read Me.txt"
-        echo "© 2025 All rights reserved." >> "Read Me.txt"
-
+    
     - name: Upload Windows Installer
       if: matrix.os == 'windows-latest'
       uses: actions/upload-artifact@v4
       with:
         name: windows-installer
         path: ObjectDetection-*-Setup.exe
-
+        
     - name: Upload macOS Installer
       if: matrix.os == 'macos-latest'
       uses: actions/upload-artifact@v4
@@ -258,34 +228,21 @@ jobs:
       with:
         name: windows-installer
         path: artifacts/windows
-
+        
     - name: Download macOS Installer
       uses: actions/download-artifact@v4
       with:
         name: macos-installer
         path: artifacts/macos
-
+    
     - name: List artifacts
       run: |
         ls -R artifacts/
-
+    
     - name: Publish Release
       uses: softprops/action-gh-release@v1
       with:
-        name: "ObjectDetection v1.1 by Nguyen Quang Vinh"
-        body: |
-          # ObjectDetection v1.1
-          
-          Developed by Nguyen Quang Vinh
-          
-          ## What's New
-          - Updated version to 1.1
-          - Added macOS ARM support (Universal binary)
-          - Added code signing for Windows
-          
-          ## Downloads
-          - Windows: ObjectDetection-v1.1-Setup.exe
-          - macOS: ObjectDetection-v1.1-Universal-Installer.dmg
+        name: "ObjectDetection ${{ needs.build.outputs.raw_version }} by Nguyen Quang Vinh"
         files: |
           artifacts/windows/*
           artifacts/macos/*
