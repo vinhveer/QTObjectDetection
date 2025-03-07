@@ -61,9 +61,7 @@ jobs:
       run: |
         mkdir -p resources
         
-        if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
-          sudo apt-get update && sudo apt-get install -y imagemagick
-        elif [[ "${{ matrix.os }}" == "macos-latest" ]]; then
+        if [[ "${{ matrix.os }}" == "macos-latest" ]]; then
           brew install imagemagick || true
         elif [[ "${{ matrix.os }}" == "windows-latest" ]]; then
           choco install imagemagick -y || true
@@ -78,8 +76,6 @@ jobs:
             convert -size $((size*2))x$((size*2)) xc:black -fill white -gravity center -pointsize $((size/5)) -annotate 0 "OD" MyIcon.iconset/icon_${size}x${size}@2x.png || true
           done
           iconutil -c icns MyIcon.iconset -o resources/icon.icns || echo "Could not create icon.icns"
-        elif [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
-          convert -size 256x256 xc:black -fill white -gravity center -pointsize 20 -annotate 0 "ObjectDetection" resources/icon.png || echo "Could not create icon.png"
         fi
       continue-on-error: true
     
@@ -87,8 +83,6 @@ jobs:
       if: matrix.os == 'windows-latest'
       shell: powershell
       run: |
-        # Tạo chứng chỉ tự ký cho ký mã
-        # Trong môi trường sản xuất, bạn nên dùng chứng chỉ thật từ CA đáng tin cậy
         $cert = New-SelfSignedCertificate -Subject "CN=Nguyen Quang Vinh, O=ObjectDetection" -Type CodeSigningCert -CertStoreLocation "Cert:\CurrentUser\My"
         $certPassword = ConvertTo-SecureString -String "password" -Force -AsPlainText
         $certPath = "codesign.pfx"
@@ -100,13 +94,10 @@ jobs:
       if: matrix.os == 'windows-latest'
       shell: bash
       run: |
-        # Build với PyInstaller
         pyinstaller --name ObjectDetection --windowed --icon=resources/icon.ico --add-data "*.py;." --add-data "controller;controller" --add-data "module;module" --add-data "views;views" --add-data "ui;ui" --add-data "configuration;configuration" main.py || exit 1
         
-        # Ký mã cho tệp thực thi
-        powershell -Command "Set-AuthenticodeSignature -FilePath 'dist\ObjectDetection\ObjectDetection.exe' -Certificate (Get-PfxCertificate -FilePath $env:CERT_PATH -Password (ConvertTo-SecureString -String $env:CERT_PASSWORD -Force -AsPlainText)) -TimestampServer 'http://timestamp.digicert.com'"
+        powershell -Command "\$certPassword = ConvertTo-SecureString -String \$env:CERT_PASSWORD -Force -AsPlainText; \$cert = Import-PfxCertificate -FilePath \$env:CERT_PATH -CertStoreLocation Cert:\CurrentUser\My -Password \$certPassword; Set-AuthenticodeSignature -FilePath 'dist\ObjectDetection\ObjectDetection.exe' -Certificate \$cert -TimestampServer 'http://timestamp.digicert.com'"
         
-        # Tạo NSIS script với thông tin tác giả và phiên bản
         cat << EOF > installer.nsi
         !include "MUI2.nsh"
         !define APP_NAME "ObjectDetection"
@@ -128,7 +119,6 @@ jobs:
         InstallDir "\$PROGRAMFILES\\\${APP_NAME}"
         ShowInstDetails show
         
-        # Thêm thông tin phiên bản và tác giả
         VIProductVersion "\${VERSION}.0.0"
         VIAddVersionKey "ProductName" "\${APP_NAME}"
         VIAddVersionKey "CompanyName" "\${AUTHOR}"
@@ -160,21 +150,17 @@ jobs:
         SectionEnd
         EOF
         
-        # Cài đặt và chạy NSIS
         choco install nsis -y --force || exit 1
         "/c/Program Files (x86)/NSIS/makensis.exe" installer.nsi || exit 1
         
-        # Ký mã cho trình cài đặt
-        powershell -Command "Set-AuthenticodeSignature -FilePath 'ObjectDetection-${{ steps.get_version.outputs.raw_version }}-Setup.exe' -Certificate (Get-PfxCertificate -FilePath $env:CERT_PATH -Password (ConvertTo-SecureString -String $env:CERT_PASSWORD -Force -AsPlainText)) -TimestampServer 'http://timestamp.digicert.com'"
+        powershell -Command "\$certPassword = ConvertTo-SecureString -String \$env:CERT_PASSWORD -Force -AsPlainText; \$cert = Import-PfxCertificate -FilePath \$env:CERT_PATH -CertStoreLocation Cert:\CurrentUser\My -Password \$certPassword; Set-AuthenticodeSignature -FilePath 'ObjectDetection-${{ steps.get_version.outputs.raw_version }}-Setup.exe' -Certificate \$cert -TimestampServer 'http://timestamp.digicert.com'"
     
     - name: Build App for macOS
       if: matrix.os == 'macos-latest'
       shell: bash
       run: |
-        # Build với PyInstaller
         pyinstaller --name ObjectDetection --windowed --icon=resources/icon.icns --add-data "*.py:." --add-data "controller:controller" --add-data "module:module" --add-data "views:views" --add-data "ui:ui" --add-data "configuration:configuration" main.py || exit 1
         
-        # Thêm thông tin phiên bản và tác giả vào Info.plist
         PLIST_PATH="dist/ObjectDetection.app/Contents/Info.plist"
         /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string ${{ steps.get_version.outputs.version }}" "$PLIST_PATH" || true
         /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${{ steps.get_version.outputs.version }}" "$PLIST_PATH" || true
@@ -183,7 +169,6 @@ jobs:
         /usr/libexec/PlistBuddy -c "Add :NSHumanReadableCopyright string © 2025 Nguyen Quang Vinh" "$PLIST_PATH" || true
         /usr/libexec/PlistBuddy -c "Set :NSHumanReadableCopyright © 2025 Nguyen Quang Vinh" "$PLIST_PATH" || true
         
-        # Tạo DMG installer
         brew install create-dmg || brew upgrade create-dmg || echo "create-dmg installation failed"
         create-dmg \
           --volname "ObjectDetection Installer" \
