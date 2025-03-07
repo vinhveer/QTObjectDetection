@@ -289,4 +289,4 @@ jobs:
         files: |
           artifacts/windows/*
           artifacts/macos/*
-        generate_release_notes
+        generate_release_notes: true
