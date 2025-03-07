@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'mainjoPzvd.ui'
+## Form generated from reading UI file 'mainfqMqZm.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.8.2
 ##
@@ -47,7 +47,7 @@ class Ui_mainWindow(object):
         self.model_layout.setContentsMargins(0, 0, 0, 0)
         self.buttonChooseModel = QPushButton(self.modelGroup)
         self.buttonChooseModel.setObjectName(u"buttonChooseModel")
-        self.buttonChooseModel.setMinimumSize(QSize(150, 0))
+        self.buttonChooseModel.setMinimumSize(QSize(150, 30))
 
         self.model_layout.addWidget(self.buttonChooseModel)
 
@@ -58,6 +58,7 @@ class Ui_mainWindow(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.labelPictureDirect.sizePolicy().hasHeightForWidth())
         self.labelPictureDirect.setSizePolicy(sizePolicy)
+        self.labelPictureDirect.setMinimumSize(QSize(0, 30))
 
         self.model_layout.addWidget(self.labelPictureDirect)
 
@@ -66,6 +67,7 @@ class Ui_mainWindow(object):
 
         self.tabWidget = QTabWidget(self.centralwidget)
         self.tabWidget.setObjectName(u"tabWidget")
+        self.tabWidget.setMinimumSize(QSize(0, 0))
         self.tabWidget.setFont(font1)
         self.tabCamera = QWidget()
         self.tabCamera.setObjectName(u"tabCamera")
@@ -78,13 +80,14 @@ class Ui_mainWindow(object):
         self.CameraSelection.setObjectName(u"CameraSelection")
         self.labelChooseCamera = QLabel(self.tabCamera)
         self.labelChooseCamera.setObjectName(u"labelChooseCamera")
+        self.labelChooseCamera.setMinimumSize(QSize(0, 30))
         self.labelChooseCamera.setFont(font1)
 
         self.CameraSelection.addWidget(self.labelChooseCamera)
 
         self.comboBoxChooseCamera = QComboBox(self.tabCamera)
         self.comboBoxChooseCamera.setObjectName(u"comboBoxChooseCamera")
-        self.comboBoxChooseCamera.setMinimumSize(QSize(180, 0))
+        self.comboBoxChooseCamera.setMinimumSize(QSize(180, 30))
 
         self.CameraSelection.addWidget(self.comboBoxChooseCamera)
 
@@ -97,13 +100,13 @@ class Ui_mainWindow(object):
 
         self.buttonStartRecord = QPushButton(self.tabCamera)
         self.buttonStartRecord.setObjectName(u"buttonStartRecord")
-        self.buttonStartRecord.setMinimumSize(QSize(150, 0))
+        self.buttonStartRecord.setMinimumSize(QSize(150, 30))
 
         self.CameraControls.addWidget(self.buttonStartRecord)
 
         self.buttonCapture = QPushButton(self.tabCamera)
         self.buttonCapture.setObjectName(u"buttonCapture")
-        self.buttonCapture.setMinimumSize(QSize(150, 0))
+        self.buttonCapture.setMinimumSize(QSize(150, 30))
 
         self.CameraControls.addWidget(self.buttonCapture)
 
@@ -113,13 +116,13 @@ class Ui_mainWindow(object):
 
         self.buttonDetect = QPushButton(self.tabCamera)
         self.buttonDetect.setObjectName(u"buttonDetect")
-        self.buttonDetect.setMinimumSize(QSize(140, 0))
+        self.buttonDetect.setMinimumSize(QSize(140, 30))
 
         self.CameraControls.addWidget(self.buttonDetect)
 
         self.buttonSaveAllDetectCam = QPushButton(self.tabCamera)
         self.buttonSaveAllDetectCam.setObjectName(u"buttonSaveAllDetectCam")
-        self.buttonSaveAllDetectCam.setMinimumSize(QSize(150, 0))
+        self.buttonSaveAllDetectCam.setMinimumSize(QSize(150, 30))
 
         self.CameraControls.addWidget(self.buttonSaveAllDetectCam)
 
@@ -199,7 +202,7 @@ class Ui_mainWindow(object):
         self.pictureSelection.setObjectName(u"pictureSelection")
         self.buttonChoosePicture = QPushButton(self.tabPicture)
         self.buttonChoosePicture.setObjectName(u"buttonChoosePicture")
-        self.buttonChoosePicture.setMinimumSize(QSize(180, 0))
+        self.buttonChoosePicture.setMinimumSize(QSize(180, 30))
 
         self.pictureSelection.addWidget(self.buttonChoosePicture)
 
@@ -218,19 +221,19 @@ class Ui_mainWindow(object):
 
         self.buttonSaveDataDetectImg = QPushButton(self.tabPicture)
         self.buttonSaveDataDetectImg.setObjectName(u"buttonSaveDataDetectImg")
-        self.buttonSaveDataDetectImg.setMinimumSize(QSize(180, 0))
+        self.buttonSaveDataDetectImg.setMinimumSize(QSize(180, 30))
 
         self.pictureControls.addWidget(self.buttonSaveDataDetectImg)
 
         self.buttonDownloadPictureBindingBox = QPushButton(self.tabPicture)
         self.buttonDownloadPictureBindingBox.setObjectName(u"buttonDownloadPictureBindingBox")
-        self.buttonDownloadPictureBindingBox.setMinimumSize(QSize(180, 0))
+        self.buttonDownloadPictureBindingBox.setMinimumSize(QSize(180, 30))
 
         self.pictureControls.addWidget(self.buttonDownloadPictureBindingBox)
 
         self.buttonDownloadPictureWarmUp = QPushButton(self.tabPicture)
         self.buttonDownloadPictureWarmUp.setObjectName(u"buttonDownloadPictureWarmUp")
-        self.buttonDownloadPictureWarmUp.setMinimumSize(QSize(180, 0))
+        self.buttonDownloadPictureWarmUp.setMinimumSize(QSize(180, 30))
 
         self.pictureControls.addWidget(self.buttonDownloadPictureWarmUp)
 
@@ -306,7 +309,7 @@ class Ui_mainWindow(object):
         self.folderSelection.setObjectName(u"folderSelection")
         self.buttonChooseFolder = QPushButton(self.tabMultiImage)
         self.buttonChooseFolder.setObjectName(u"buttonChooseFolder")
-        self.buttonChooseFolder.setMinimumSize(QSize(120, 0))
+        self.buttonChooseFolder.setMinimumSize(QSize(120, 30))
 
         self.folderSelection.addWidget(self.buttonChooseFolder)
 
@@ -325,13 +328,13 @@ class Ui_mainWindow(object):
 
         self.buttonSaveImageChoose = QPushButton(self.tabMultiImage)
         self.buttonSaveImageChoose.setObjectName(u"buttonSaveImageChoose")
-        self.buttonSaveImageChoose.setMinimumSize(QSize(230, 0))
+        self.buttonSaveImageChoose.setMinimumSize(QSize(230, 30))
 
         self.folderControls.addWidget(self.buttonSaveImageChoose)
 
         self.buttonSaveAllData = QPushButton(self.tabMultiImage)
         self.buttonSaveAllData.setObjectName(u"buttonSaveAllData")
-        self.buttonSaveAllData.setMinimumSize(QSize(250, 0))
+        self.buttonSaveAllData.setMinimumSize(QSize(250, 30))
 
         self.folderControls.addWidget(self.buttonSaveAllData)
 
@@ -409,55 +412,9 @@ class Ui_mainWindow(object):
         self.tabSettings.setObjectName(u"tabSettings")
         self.gridLayout_9 = QGridLayout(self.tabSettings)
         self.gridLayout_9.setObjectName(u"gridLayout_9")
-        self.label_2 = QLabel(self.tabSettings)
-        self.label_2.setObjectName(u"label_2")
-        font3 = QFont()
-        font3.setFamilies([u"Segoe UI"])
-        font3.setPointSize(14)
-        self.label_2.setFont(font3)
-
-        self.gridLayout_9.addWidget(self.label_2, 0, 0, 1, 1)
-
-        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
-
-        self.gridLayout_9.addItem(self.verticalSpacer, 2, 0, 1, 1)
-
         self.verticalSpacer_2 = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 
-        self.gridLayout_9.addItem(self.verticalSpacer_2, 7, 0, 1, 1)
-
-        self.label = QLabel(self.tabSettings)
-        self.label.setObjectName(u"label")
-
-        self.gridLayout_9.addWidget(self.label, 5, 0, 1, 1)
-
-        self.comboBoxChooseTypeSaveData = QComboBox(self.tabSettings)
-        self.comboBoxChooseTypeSaveData.addItem("")
-        self.comboBoxChooseTypeSaveData.addItem("")
-        self.comboBoxChooseTypeSaveData.setObjectName(u"comboBoxChooseTypeSaveData")
-
-        self.gridLayout_9.addWidget(self.comboBoxChooseTypeSaveData, 6, 0, 1, 1)
-
-        self.label_3 = QLabel(self.tabSettings)
-        self.label_3.setObjectName(u"label_3")
-
-        self.gridLayout_9.addWidget(self.label_3, 3, 0, 1, 1)
-
-        self.horizontalLayout_2 = QHBoxLayout()
-        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
-        self.buttonSaveShot = QPushButton(self.tabSettings)
-        self.buttonSaveShot.setObjectName(u"buttonSaveShot")
-        self.buttonSaveShot.setMinimumSize(QSize(151, 0))
-
-        self.horizontalLayout_2.addWidget(self.buttonSaveShot)
-
-        self.pathSaveShot = QLineEdit(self.tabSettings)
-        self.pathSaveShot.setObjectName(u"pathSaveShot")
-
-        self.horizontalLayout_2.addWidget(self.pathSaveShot)
-
-
-        self.gridLayout_9.addLayout(self.horizontalLayout_2, 4, 0, 1, 1)
+        self.gridLayout_9.addItem(self.verticalSpacer_2, 6, 0, 1, 1)
 
         self.horizontalLayout = QHBoxLayout()
         self.horizontalLayout.setObjectName(u"horizontalLayout")
@@ -467,17 +424,60 @@ class Ui_mainWindow(object):
 
         self.buttonSaveSettings = QPushButton(self.tabSettings)
         self.buttonSaveSettings.setObjectName(u"buttonSaveSettings")
-        self.buttonSaveSettings.setMinimumSize(QSize(150, 0))
+        self.buttonSaveSettings.setMinimumSize(QSize(150, 30))
 
         self.horizontalLayout.addWidget(self.buttonSaveSettings)
 
 
-        self.gridLayout_9.addLayout(self.horizontalLayout, 8, 0, 1, 1)
+        self.gridLayout_9.addLayout(self.horizontalLayout, 7, 0, 1, 1)
 
-        self.label_4 = QLabel(self.tabSettings)
-        self.label_4.setObjectName(u"label_4")
+        self.label_2 = QLabel(self.tabSettings)
+        self.label_2.setObjectName(u"label_2")
+        font3 = QFont()
+        font3.setFamilies([u"Segoe UI"])
+        font3.setPointSize(14)
+        self.label_2.setFont(font3)
 
-        self.gridLayout_9.addWidget(self.label_4, 1, 0, 1, 1)
+        self.gridLayout_9.addWidget(self.label_2, 0, 0, 1, 1)
+
+        self.comboBoxChooseTypeSaveData = QComboBox(self.tabSettings)
+        self.comboBoxChooseTypeSaveData.addItem("")
+        self.comboBoxChooseTypeSaveData.addItem("")
+        self.comboBoxChooseTypeSaveData.setObjectName(u"comboBoxChooseTypeSaveData")
+        self.comboBoxChooseTypeSaveData.setMinimumSize(QSize(0, 30))
+
+        self.gridLayout_9.addWidget(self.comboBoxChooseTypeSaveData, 5, 0, 1, 1)
+
+        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+
+        self.gridLayout_9.addItem(self.verticalSpacer, 1, 0, 1, 1)
+
+        self.horizontalLayout_2 = QHBoxLayout()
+        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
+        self.buttonSaveShot = QPushButton(self.tabSettings)
+        self.buttonSaveShot.setObjectName(u"buttonSaveShot")
+        self.buttonSaveShot.setMinimumSize(QSize(151, 30))
+
+        self.horizontalLayout_2.addWidget(self.buttonSaveShot)
+
+        self.pathSaveShot = QLineEdit(self.tabSettings)
+        self.pathSaveShot.setObjectName(u"pathSaveShot")
+        self.pathSaveShot.setMinimumSize(QSize(0, 30))
+
+        self.horizontalLayout_2.addWidget(self.pathSaveShot)
+
+
+        self.gridLayout_9.addLayout(self.horizontalLayout_2, 3, 0, 1, 1)
+
+        self.label = QLabel(self.tabSettings)
+        self.label.setObjectName(u"label")
+
+        self.gridLayout_9.addWidget(self.label, 4, 0, 1, 1)
+
+        self.label_3 = QLabel(self.tabSettings)
+        self.label_3.setObjectName(u"label_3")
+
+        self.gridLayout_9.addWidget(self.label_3, 2, 0, 1, 1)
 
         self.tabWidget.addTab(self.tabSettings, "")
 
@@ -490,7 +490,7 @@ class Ui_mainWindow(object):
 
         self.retranslateUi(mainWindow)
 
-        self.tabWidget.setCurrentIndex(0)
+        self.tabWidget.setCurrentIndex(3)
         self.tabWidgetCamera.setCurrentIndex(0)
         self.tabWidgetPicture.setCurrentIndex(0)
         self.tabWidgetResultFolder.setCurrentIndex(0)
@@ -500,7 +500,7 @@ class Ui_mainWindow(object):
     # setupUi
 
     def retranslateUi(self, mainWindow):
-        mainWindow.setWindowTitle(QCoreApplication.translate("mainWindow", u"Object Detection", None))
+        mainWindow.setWindowTitle(QCoreApplication.translate("mainWindow", u"Object Detection with YOLO", None))
         self.buttonChooseModel.setText(QCoreApplication.translate("mainWindow", u"Ch\u1ecdn t\u1eadp tin Model", None))
         self.labelPictureDirect.setText(QCoreApplication.translate("mainWindow", u"Ch\u01b0a ch\u1ecdn t\u1eadp tin Model", None))
         self.labelChooseCamera.setText(QCoreApplication.translate("mainWindow", u"Ch\u1ecdn Camera", None))
@@ -533,15 +533,14 @@ class Ui_mainWindow(object):
         self.tabWidgetResultFolder.setTabText(self.tabWidgetResultFolder.indexOf(self.tabResultWarmUp), QCoreApplication.translate("mainWindow", u"H\u00ecnh \u1ea3nh (Warm Up)", None))
         self.tabWidgetResultFolder.setTabText(self.tabWidgetResultFolder.indexOf(self.tabResultStatus), QCoreApplication.translate("mainWindow", u"Tr\u1ea1ng th\u00e1i", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabMultiImage), QCoreApplication.translate("mainWindow", u"Nh\u1eadn di\u1ec7n nhi\u1ec1u h\u00ecnh \u1ea3nh", None))
+        self.buttonSaveSettings.setText(QCoreApplication.translate("mainWindow", u"L\u01b0u c\u00e0i \u0111\u1eb7t", None))
         self.label_2.setText(QCoreApplication.translate("mainWindow", u"C\u00e0i \u0111\u1eb7t ch\u01b0\u01a1ng tr\u00ecnh", None))
-        self.label.setText(QCoreApplication.translate("mainWindow", u"Ph\u01b0\u01a1ng th\u1ee9c l\u01b0u t\u1eadp tin", None))
         self.comboBoxChooseTypeSaveData.setItemText(0, QCoreApplication.translate("mainWindow", u"L\u01b0u v\u00e0o \u0111\u01b0\u1eddng d\u1eabn \u0111\u00e3 c\u00e0i \u0111\u1eb7t s\u1eb5n", None))
         self.comboBoxChooseTypeSaveData.setItemText(1, QCoreApplication.translate("mainWindow", u"H\u1ecfi ng\u01b0\u1eddi d\u00f9ng ch\u1ecdn \u0111\u01b0\u1eddng d\u1eabn tr\u01b0\u1edbc khi l\u01b0u", None))
 
-        self.label_3.setText(QCoreApplication.translate("mainWindow", u"\u0110\u01b0\u1eddng d\u1eabn l\u01b0u h\u00ecnh ch\u1ee5p k\u1ebft qu\u1ea3", None))
         self.buttonSaveShot.setText(QCoreApplication.translate("mainWindow", u"Ch\u1ecdn \u0111\u01b0\u1eddng d\u1eabn", None))
-        self.buttonSaveSettings.setText(QCoreApplication.translate("mainWindow", u"L\u01b0u c\u00e0i \u0111\u1eb7t", None))
-        self.label_4.setText(QCoreApplication.translate("mainWindow", u"\u0110\u1ec3 c\u00e1c thay \u0111\u1ed5i c\u00f3 hi\u1ec7u l\u1ef1c, vui l\u00f2ng ch\u1ecdn v\u00e0o \"L\u01b0u c\u00e0i \u0111\u1eb7t\" sau khi \u0111\u00e3 thi\u1ebft \u0111\u1eb7t xong.", None))
+        self.label.setText(QCoreApplication.translate("mainWindow", u"Ph\u01b0\u01a1ng th\u1ee9c l\u01b0u t\u1eadp tin", None))
+        self.label_3.setText(QCoreApplication.translate("mainWindow", u"\u0110\u01b0\u1eddng d\u1eabn l\u01b0u h\u00ecnh ch\u1ee5p k\u1ebft qu\u1ea3", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabSettings), QCoreApplication.translate("mainWindow", u"C\u00e0i \u0111\u1eb7t", None))
     # retranslateUi
 
